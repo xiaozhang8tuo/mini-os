@@ -6,6 +6,7 @@
 *.lo
 *.o
 *.obj
+*.s
 
 # Precompiled Headers
 *.gch
@@ -30,3 +31,11 @@
 *.exe
 *.out
 *.app
+
+image
+*.elf 
+*.o 
+*.bin 
+os_dis.txt 
+os_elf.txt 
+start.s

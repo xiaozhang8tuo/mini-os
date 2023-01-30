@@ -17,6 +17,7 @@ CFLAGS = -g -c -O0 -m32 -fno-pie -fno-stack-protector -nostdlib -nostdinc
 # ld parm
 # -m elf_i386 64位机成功链接32位目标文件
 # -Ttext=0x7c00 指定起始位置 -Tbss=org/-Tdata=org/-Ttext=org Same as --section-start, with ".bss", ".data" or ".text" as the sectionname.
+# http://www.ruanyifeng.com/blog/2015/09/0x7c00.html 为什么主引导记录的内存地址是0x7C00？
 
 all: source/os.c source/os.h source/start.s
 	$(TOOL_PREFIX)gcc $(CFLAGS) source/start.S
@@ -26,7 +27,7 @@ all: source/os.c source/os.h source/start.s
 	${TOOL_PREFIX}objcopy -O binary os.elf os.bin
 	${TOOL_PREFIX}objdump -x -d -S  os.elf > os_dis.txt	
 	${TOOL_PREFIX}readelf -a  os.elf > os_elf.txt
-# dd if=os.bin of=../image/disk.img conv=notrunc
+	dd if=os.bin of=image/disk.img conv=notrunc
 
 clean:
-	rm -f *.elf *.o *.bin
+	rm -f *.elf *.o *.bin os_dis.txt os_elf.txt start.s
