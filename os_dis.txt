@@ -1,0 +1,56 @@
+
+os.elf:     file format elf32-i386
+os.elf
+architecture: i386, flags 0x00000112:
+EXEC_P, HAS_SYMS, D_PAGED
+start address 0x00007c00
+
+Program Header:
+    LOAD off    0x00000000 vaddr 0x00007000 paddr 0x00006000 align 2**12
+         filesz 0x00000094 memsz 0x00000094 flags r--
+    LOAD off    0x00000c00 vaddr 0x00007c00 paddr 0x00007c00 align 2**12
+         filesz 0x00000002 memsz 0x00000002 flags r-x
+   STACK off    0x00000000 vaddr 0x00000000 paddr 0x00000000 align 2**4
+         filesz 0x00000000 memsz 0x00000000 flags rwx
+
+Sections:
+Idx Name          Size      VMA       LMA       File off  Algn
+  0 .text         00000002  00007c00  00007c00  00000c00  2**0
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  1 .comment      0000002b  00000000  00000000  00000c02  2**0
+                  CONTENTS, READONLY
+  2 .debug_aranges 00000020  00000000  00000000  00000c30  2**3
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+  3 .debug_info   00000026  00000000  00000000  00000c50  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+  4 .debug_abbrev 00000014  00000000  00000000  00000c76  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+  5 .debug_line   0000003e  00000000  00000000  00000c8a  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+  6 .debug_str    000000d2  00000000  00000000  00000cc8  2**0
+                  CONTENTS, READONLY, DEBUGGING, OCTETS
+SYMBOL TABLE:
+00007c00 l    d  .text	00000000 .text
+00000000 l    d  .comment	00000000 .comment
+00000000 l    d  .debug_aranges	00000000 .debug_aranges
+00000000 l    d  .debug_info	00000000 .debug_info
+00000000 l    d  .debug_abbrev	00000000 .debug_abbrev
+00000000 l    d  .debug_line	00000000 .debug_line
+00000000 l    d  .debug_str	00000000 .debug_str
+00000000 l    df *ABS*	00000000 os.c
+00007c00 g       .text	00000000 _start
+00008000 g       .text	00000000 __bss_start
+00008000 g       .text	00000000 _edata
+00008000 g       .text	00000000 _end
+
+
+
+Disassembly of section .text:
+
+00007c00 <_start>:
+.code16
+
+.text
+
+_start:
+    7c00:	eb fe                	jmp    7c00 <_start>
