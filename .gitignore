@@ -38,4 +38,4 @@ image
 *.bin 
 os_dis.txt 
 os_elf.txt 
-start.s
+**/start.s
