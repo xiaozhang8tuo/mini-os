@@ -18,7 +18,8 @@ _start:
     mov $_start, %esp
 
 
-# bios只把512B加载了，512B后面的并没有加载，需要我们手动加载
+# bios 只把磁盘中的第一个扇区(0xaa,0x55结尾)，加载到内存中(起始地址0x7c00后面的512B)
+# 512B 后面的并没有加载到内存中，需要我们手动加载
 read_self_all:
     # mov $0x7e00, %bx   # buffer addr 0x7c00+512=0x7e00        // start address 0x00007c00 反汇编文件中可以看到 7c00就是程序的起始地址
     mov $_start_32, %bx  # buffer addr 0x7c00+512=0x7e00  
@@ -28,6 +29,8 @@ read_self_all:
     int $0x13          # read 64 sects in first disk start from 2 sect to buffer addr 
     jc  read_self_all  # after read disk, check the cf to judge read success? if not jmp to continue read 
 
+
+    # 进入保护模式
     cli                # 关中断
     lgdt (gdt_desc)    # 设置lgdt寄存器
     mov $1, %eax
@@ -37,13 +40,15 @@ read_self_all:
 
 
 
-    .org 0x1fe # 510
-    .byte 0x55, 0xaa # alloc   unsigned char s[] = {0x55,0xaa}; in 510 boot flag 
+    
+.org 0x1fe # 510
+.byte 0x55, 0xaa # alloc   unsigned char s[] = {0x55,0xaa}; in 510 boot flag 
+
 .code32     # 保护模式32位
 .text
 _start_32:
     # .fill 64*1024, 1, 0x35 # fill repeat, size, val     // gdb 中查看内存分布 -exec x /32x 0x7e00 
-    mov $KERNEL_DATA_SEG, %eax
+    mov $KERNEL_DATA_SEG, %eax  # 设置数据段相关的段选择子
     mov %ax, %ds
     mov %ax, %es
     mov %ax, %ss
@@ -53,6 +58,6 @@ _start_32:
 
 
 
-gdt_desc:
-    .word (256*8) - 1
-    .long gdt_table
+gdt_desc:               # GDTR寄存器格式
+    .word (256*8) - 1   # 16位界限  
+    .long gdt_table     # 32位基地址
