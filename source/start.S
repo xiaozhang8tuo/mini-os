@@ -54,6 +54,23 @@ _start_32:
     mov %ax, %ss
     mov %ax, %gs
     mov %ax, %fs
+
+    mov $_start, %esp
+
+    # 打开分页机制,设置页表项  cr0 cr3 cr4寄存器
+	mov $pg_dir, %eax
+	mov %eax, %cr3
+
+    # 关闭二级页表，使用1级页表，支持4MB 
+	mov %cr4, %eax
+	orl $(1 << 4), %eax		    # PSE位,支持4MB分页
+	mov %eax, %cr4
+
+    # 开启分页机制,设置cr0中的标志位
+	mov %cr0, %eax
+	orl $(1 << 31), %eax		# 打开PG位,开启分页机制
+	mov %eax, %cr0
+
     jmp .
 
 
