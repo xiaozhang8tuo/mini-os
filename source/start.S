@@ -57,6 +57,8 @@ _start_32:
 
     mov $_start, %esp
 
+    call os_init
+
     # 打开分页机制,设置页表项  cr0 cr3 cr4寄存器
 	mov $pg_dir, %eax
 	mov %eax, %cr3
@@ -69,7 +71,7 @@ _start_32:
     # 开启分页机制,设置cr0中的标志位
 	mov %cr0, %eax
 	orl $(1 << 31), %eax		# 打开PG位,开启分页机制
-	mov %eax, %cr0
+	mov %eax, %cr0              # 执行完毕这一步之后，0x80000000(线性地址)才通过分页机制映射到了对应变量
 
     jmp .
 
