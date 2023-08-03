@@ -1,6 +1,6 @@
 #include "os.h"
 # 声明本地以下符号是全局的，在其它源文件中可以访问
-.global _start
+.global _start, timer_int
 
 # 指定以下的代码生成16位的机器指令，这样才能在启动时的实模式下运行
 .code16
@@ -33,6 +33,7 @@ read_self_all:
     # 进入保护模式
     cli                # 关中断
     lgdt (gdt_desc)    # 设置lgdt寄存器
+    lidt (idt_desc)    # 设置igdt寄存器
     mov $1, %eax
     lmsw %ax          # 设置CR0 P/E 位, 开启保护模式
     # cs寄存器设置为KERNEL_CODE_SEG(段选择子索引为1), 因为起始地址是0, 加_start_32偏移量，还是跳到_start_32的位置
@@ -40,8 +41,8 @@ read_self_all:
 
 
 
-    
-.org 0x1fe # 510
+# 跳到引导标志, 由bios在上电后检查
+.org 0x1fe # 510  // 引导标志
 .byte 0x55, 0xaa # alloc   unsigned char s[] = {0x55,0xaa}; in 510 boot flag 
 
 .code32     # 保护模式32位
@@ -59,11 +60,11 @@ _start_32:
 
     call os_init
 
-    # 打开分页机制,设置页表项  cr0 cr3 cr4寄存器
+    # 打开分页机制,设置页表项  cr0(开启分页) cr3(设置页表) cr4(支持4MB直接映射)寄存器
 	mov $pg_dir, %eax
 	mov %eax, %cr3
 
-    # 关闭二级页表，使用1级页表，支持4MB 
+    # 使用1级页表，支持4MB 
 	mov %cr4, %eax
 	orl $(1 << 4), %eax		    # PSE位,支持4MB分页
 	mov %eax, %cr4
@@ -73,10 +74,27 @@ _start_32:
 	orl $(1 << 31), %eax		# 打开PG位,开启分页机制
 	mov %eax, %cr0              # 执行完毕这一步之后，0x80000000(线性地址)才通过分页机制映射到了对应变量
 
+    sti                         # 开启时钟中断
     jmp .
 
+# 定时器0中断函数
+timer_int:
+	push %ds
+	pusha						# 保护现场，段寄存器不用保存
+
+	mov $0x20, %al
+	outb %al, $0x20				# 发送EOI 即调用 0x20 对应中断
+
+	popa						# 恢复现场
+	pop %ds
+	iret						# 中断返回
 
 
 gdt_desc:               # GDTR寄存器格式
     .word (256*8) - 1   # 16位界限  
     .long gdt_table     # 32位基地址
+
+
+idt_desc:               # IDTR寄存器格式
+    .word (256*8) - 1   # 16位界限  
+    .long idt_table     # 32位基地址
