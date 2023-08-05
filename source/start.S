@@ -74,8 +74,24 @@ _start_32:
 	orl $(1 << 31), %eax		# 打开PG位,开启分页机制
 	mov %eax, %cr0              # 执行完毕这一步之后，0x80000000(线性地址)才通过分页机制映射到了对应变量
 
-    sti                         # 开启时钟中断
-    jmp .
+	# 下面模拟中断返回，从而实现从特权级0到特权级3的变化
+	# 中断发生时，会自动压入原SS, ESP, EFLAGS, CS, EIP到栈中
+	push $APP_DATA_SEG
+	push $task0_dpl3_stack + 1024	# 特权级3时的栈, 
+	push $0			# 中断暂时关掉 0x202						# EFLAGS
+	push $APP_CODE_SEG				# CPL=3时的选择子
+	push $task_0_entry					# eip
+	iret							# 从中断返回，将切换至任务0
+
+
+
+task_0_entry:
+	# 进入任务0时,需要重设其数据段寄存器为特权级3的
+	mov %ss, %ax
+	mov %ax, %ds
+	mov %ax, %es
+	jmp .
+
 
 # 定时器0中断函数
 # 这段代码并未直接调用IDT表中的中断处理程序，而是执行了中断处理函数的一些常规步骤，
