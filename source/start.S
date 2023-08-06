@@ -1,6 +1,6 @@
 #include "os.h"
 # 声明本地以下符号是全局的，在其它源文件中可以访问
-.global _start
+.global _start, timer_int
 
 # 指定以下的代码生成16位的机器指令，这样才能在启动时的实模式下运行
 .code16
@@ -33,6 +33,7 @@ read_self_all:
     # 进入保护模式
     cli                # 关中断
     lgdt (gdt_desc)    # 设置lgdt寄存器
+    lidt (idt_desc)    # 设置igdt寄存器
     mov $1, %eax
     lmsw %ax          # 设置CR0 P/E 位, 开启保护模式
     # cs寄存器设置为KERNEL_CODE_SEG(段选择子索引为1), 因为起始地址是0, 加_start_32偏移量，还是跳到_start_32的位置
@@ -40,8 +41,8 @@ read_self_all:
 
 
 
-    
-.org 0x1fe # 510
+# 跳到引导标志, 由bios在上电后检查
+.org 0x1fe # 510  // 引导标志
 .byte 0x55, 0xaa # alloc   unsigned char s[] = {0x55,0xaa}; in 510 boot flag 
 
 .code32     # 保护模式32位
@@ -59,11 +60,11 @@ _start_32:
 
     call os_init
 
-    # 打开分页机制,设置页表项  cr0 cr3 cr4寄存器
+    # 打开分页机制,设置页表项  cr0(开启分页) cr3(设置页表) cr4(支持4MB直接映射)寄存器
 	mov $pg_dir, %eax
 	mov %eax, %cr3
 
-    # 关闭二级页表，使用1级页表，支持4MB 
+    # 使用1级页表，支持4MB 
 	mov %cr4, %eax
 	orl $(1 << 4), %eax		    # PSE位,支持4MB分页
 	mov %eax, %cr4
@@ -73,10 +74,56 @@ _start_32:
 	orl $(1 << 31), %eax		# 打开PG位,开启分页机制
 	mov %eax, %cr0              # 执行完毕这一步之后，0x80000000(线性地址)才通过分页机制映射到了对应变量
 
-    jmp .
 
+    mov $TASK0_TSS_SEG, %ax
+    ltr %ax                     # 将任务0的TSS段选择符加载到任务寄存器tr。只明确加这一次，以后新任务LDT的加截，是CPU根据TSS中的LDT项自动加载。
+
+	# 下面模拟中断返回，从而实现从特权级0到特权级3的变化
+	# 中断发生时，会自动压入原SS, ESP, EFLAGS, CS, EIP到栈中
+	push $APP_DATA_SEG
+	push $task0_dpl3_stack + 1024	# 特权级3时的栈, 
+	push $0x202			# 中断暂时关掉 0x202						# EFLAGS 标值寄存器的中断允许IF置位
+	push $APP_CODE_SEG				# CPL=3时的选择子
+	push $task_0_entry					# eip
+	iret							# 从中断返回，将切换至任务0
+
+
+
+task_0_entry:
+	# 进入任务0时,需要重设其数据段寄存器为特权级3的
+	mov %ss, %ax
+	mov %ax, %ds
+	mov %ax, %es
+	jmp task0
+
+
+# 定时器0中断函数
+# 这段代码并未直接调用IDT表中的中断处理程序，而是执行了中断处理函数的一些常规步骤，
+# 然后通过iret指令返回到中断发生前的现场，从而继续执行之前的程序。在实际场景中，中断处理程序会在IDT表中注册，并在需要时由CPU调用。
+timer_int:
+	push %ds
+	pusha						# 保护现场，段寄存器不用保存
+
+	mov $0x20, %al              # !!!注意这里的0x20是表示中断结束(EOI END OF INTER)的特殊值和8259的口无关
+	outb %al, $0x20				# 发送EOI(0x20) 到 8259的recv口
+
+
+	# 使用内核的数据段寄存器，因为要访问内核的数据 !!!
+	mov $KERNEL_DATA_SEG, %ax
+	mov %ax, %ds
+
+    call task_sched             # 在定时器这里执行任务切换
+
+	popa						# 恢复现场
+	pop %ds
+	iret						# 中断返回
 
 
 gdt_desc:               # GDTR寄存器格式
     .word (256*8) - 1   # 16位界限  
     .long gdt_table     # 32位基地址
+
+
+idt_desc:               # IDTR寄存器格式
+    .word (256*8) - 1   # 16位界限  
+    .long idt_table     # 32位基地址
