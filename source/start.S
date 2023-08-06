@@ -74,11 +74,15 @@ _start_32:
 	orl $(1 << 31), %eax		# 打开PG位,开启分页机制
 	mov %eax, %cr0              # 执行完毕这一步之后，0x80000000(线性地址)才通过分页机制映射到了对应变量
 
+
+    mov $TASK0_TSS_SEG, %ax
+    ltr %ax                     # 将任务0的TSS段选择符加载到任务寄存器tr。只明确加这一次，以后新任务LDT的加截，是CPU根据TSS中的LDT项自动加载。
+
 	# 下面模拟中断返回，从而实现从特权级0到特权级3的变化
 	# 中断发生时，会自动压入原SS, ESP, EFLAGS, CS, EIP到栈中
 	push $APP_DATA_SEG
 	push $task0_dpl3_stack + 1024	# 特权级3时的栈, 
-	push $0			# 中断暂时关掉 0x202						# EFLAGS
+	push $0x202			# 中断暂时关掉 0x202						# EFLAGS 标值寄存器的中断允许IF置位
 	push $APP_CODE_SEG				# CPL=3时的选择子
 	push $task_0_entry					# eip
 	iret							# 从中断返回，将切换至任务0
@@ -90,7 +94,7 @@ task_0_entry:
 	mov %ss, %ax
 	mov %ax, %ds
 	mov %ax, %es
-	jmp .
+	jmp task0
 
 
 # 定时器0中断函数
@@ -102,6 +106,13 @@ timer_int:
 
 	mov $0x20, %al              # !!!注意这里的0x20是表示中断结束(EOI END OF INTER)的特殊值和8259的口无关
 	outb %al, $0x20				# 发送EOI(0x20) 到 8259的recv口
+
+
+	# 使用内核的数据段寄存器，因为要访问内核的数据 !!!
+	mov $KERNEL_DATA_SEG, %ax
+	mov %ax, %ds
+
+    call task_sched             # 在定时器这里执行任务切换
 
 	popa						# 恢复现场
 	pop %ds

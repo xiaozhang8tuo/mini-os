@@ -5,6 +5,26 @@ typedef unsigned char   uint8_t;
 typedef unsigned short  uint16_t;
 typedef unsigned int    uint32_t;
 
+void task0()
+{
+    uint8_t color = 0;
+
+    for (;;)
+    {
+        color--;
+    }
+}
+
+void task1()
+{
+    uint8_t color = 0xff;
+
+    for (;;)
+    {
+        color--;
+    }
+}
+
 #define MAP_ADDR        (0x80000000)            // 要映射的地址
 // 设置页表项 PS: 这里根据手册32-bit page，不启用二级页表, 只使用1级页表映射物理内存就好
 #define PDE_P  (1 << 0)
@@ -26,6 +46,51 @@ uint32_t pg_dir[1024] __attribute__((aligned(4096))) = {
 };
 
 
+/**
+ * @brief 任务0和1的栈空间
+ */
+uint32_t task0_dpl0_stack[1024], task0_dpl3_stack[1024], task1_dpl0_stack[1024], task1_dpl3_stack[1024];
+
+/**
+ * @brief 任务0的任务状态段
+ */
+uint32_t task0_tss[] = {
+    // prelink, esp0, ss0, esp1, ss1, esp2, ss2
+    0,  (uint32_t)task0_dpl0_stack + 4*1024, KERNEL_DATA_SEG , /* 后边不用使用 */ 0x0, 0x0, 0x0, 0x0,
+    // cr3, eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi,
+    (uint32_t)pg_dir,  (uint32_t)task0/*入口地址*/, 0x202, 0xa, 0xc, 0xd, 0xb, (uint32_t)task0_dpl3_stack + 4*1024/* 栈 */, 0x1, 0x2, 0x3,
+    // es, cs, ss, ds, fs, gs, ldt, iomap
+    APP_DATA_SEG, APP_CODE_SEG, APP_DATA_SEG, APP_DATA_SEG, APP_DATA_SEG, APP_DATA_SEG, 0x0, 0x0,
+};
+
+uint32_t task1_tss[] = {
+    // prelink, esp0, ss0, esp1, ss1, esp2, ss2
+    0,  (uint32_t)task1_dpl0_stack + 4*1024, KERNEL_DATA_SEG , /* 后边不用使用 */ 0x0, 0x0, 0x0, 0x0,
+    // cr3, eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi,
+    (uint32_t)pg_dir,  (uint32_t)task1/*入口地址*/, 0x202, 0xa, 0xc, 0xd, 0xb, (uint32_t)task1_dpl3_stack + 4*1024/* 栈 */, 0x1, 0x2, 0x3,
+    // es, cs, ss, ds, fs, gs, ldt, iomap
+    APP_DATA_SEG, APP_CODE_SEG, APP_DATA_SEG, APP_DATA_SEG, APP_DATA_SEG, APP_DATA_SEG, 0x0, 0x0,
+};
+
+
+/*
+	task_sched()将切换任务
+ */
+// 跳转到一个任务的TSS段选择符组成的地址处会造成CPU进行任务切换操作。
+// 其中临时数据结构addr用于组建远跳转(far jump)ljmp指令的操作数。该操作数由4字节偏移
+// 地址和2字节的段选择符组成。因此tmp中0的值是32位偏移值，而低2字节是新TSS段的
+// 选择符task_tss（高2字节不用）。跳转到TSS段选择符会造成任务切换到该TSS对应的进程。对于造成任务
+// 切换的长跳转
+// 其格式为：jmp 16位段选择符:32位偏移值。但在内存中操作数的表示顺序与这里正好相反。       
+void task_sched (void) {
+    static int task_tss = TASK0_TSS_SEG;
+
+    // 更换当前任务的tss，然后切换过去
+    task_tss = (task_tss == TASK0_TSS_SEG) ? TASK1_TSS_SEG : TASK0_TSS_SEG;
+    uint32_t addr[] = {0, task_tss };
+    __asm__ __volatile__("ljmpl *(%[a])"::[a]"r"(addr));
+}
+
 // idt表中的中断处理函数
 struct {uint16_t offset_l, selector, attr, offset_h;} idt_table[256] __attribute__((aligned(8))) = {1};
 
@@ -40,6 +105,10 @@ struct { uint16_t limit_l, base_l, basehl_attr, base_limit;} gdt_table[256] __at
     [APP_CODE_SEG/ 8] = {0xffff, 0x0000, 0xfa00, 0x00cf},
     // 0x00cff3000000ffff - 从0地址开始，P存在，DPL=3，Type=非系统段，数据段，界限4G，可读写
     [APP_DATA_SEG/ 8] = {0xffff, 0x0000, 0xf300, 0x00cf},
+
+    // 两个进程的task0和tas1的tss段:自己设置，直接写会编译报错
+    [TASK0_TSS_SEG/ 8] = {0x0068, 0, 0xe900, 0x0},
+    [TASK1_TSS_SEG/ 8] = {0x0068, 0, 0xe900, 0x0},
 };
 
 
@@ -80,6 +149,11 @@ void os_init (void) {
     idt_table[0x20].offset_l = (uint32_t)timer_int & 0xffff;
     idt_table[0x20].selector = KERNEL_CODE_SEG;
     idt_table[0x20].attr = 0x8E00;      // 存在，DPL=0, 中断门
+
+    // 添加任务和系统调用
+    gdt_table[TASK0_TSS_SEG / 8].base_l = (uint16_t)(uint32_t)task0_tss;
+    gdt_table[TASK1_TSS_SEG / 8].base_l = (uint16_t)(uint32_t)task1_tss;
+
 
     // 页目录表的第一项做恒等映射，不对应二级页表
     // 页目录表的第512项指向对应的二级页表，二级页表对应map_phy_buffer的地址
