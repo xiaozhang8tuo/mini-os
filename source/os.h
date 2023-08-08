@@ -7,5 +7,6 @@
 #define APP_DATA_SEG            ((4 * 8) | 3)       // 特权级3
 #define TASK0_TSS_SEG           (5 * 8)    
 #define TASK1_TSS_SEG           (6 * 8)
+#define SYS_CALL_SEG            (7 * 8)
 
 #endif
