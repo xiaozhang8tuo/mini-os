@@ -1,6 +1,6 @@
 #include "os.h"
 # 声明本地以下符号是全局的，在其它源文件中可以访问
-.global _start, timer_int
+.global _start, timer_int, syscall_handler
 
 # 指定以下的代码生成16位的机器指令，这样才能在启动时的实模式下运行
 .code16
@@ -96,6 +96,23 @@ task_0_entry:
 	mov %ax, %es
 	jmp task0
 
+
+
+syscall_handler:
+    push %ds
+	pusha						# 保护现场，段寄存器不用保存
+	mov $KERNEL_DATA_SEG, %ax
+	mov %ax, %ds				#  Push AX, CX, DX, BX, original SP, BP, SI, and DI.
+
+    mov %esp, %ebp				# 下面压栈时,esp会不断变化,所以使用ebp作为基址
+	push 13*4(%ebp)				# 提取出原压入的各项参数,再按相同的顺序压入一遍
+	push 12*4(%ebp)
+	push 11*4(%ebp)
+	call do_syscall				# 调用api函数,注意这时是在特级0的模式下运行,可以做很多有需要高权限才能做的事
+    add $(3*4), %esp			# 取消刚才压入的值
+	popa						# 恢复现场
+	pop %ds
+	retf $(3*4)					# 使用远跳转
 
 # 定时器0中断函数
 # 这段代码并未直接调用IDT表中的中断处理程序，而是执行了中断处理函数的一些常规步骤，

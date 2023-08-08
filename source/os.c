@@ -5,25 +5,61 @@ typedef unsigned char   uint8_t;
 typedef unsigned short  uint16_t;
 typedef unsigned int    uint32_t;
 
+
+void syscall_handler(void);
+
+void do_syscall (int func, char *str, char color) {
+    static int row = 1;     // 初始值不能为0，否则其初始化值不确定
+
+    if (func == 2) {
+        // 显示器共80列，25行，按字符显示，每个字符需要用两个字节表示
+        unsigned short * dest = (unsigned short *)0xb8000 + 80*row;
+        while (*str) {
+            // 其中一个字节保存要显示的字符，另一个字节表示颜色
+            *dest++ = *str++ | (color << 8);
+        }
+
+        // 逐行显示，超过一行则回到第0行再显示
+        row = (row >= 25) ? 0 : row + 1;
+
+        // 加点延时，让显示慢下来
+        for (int i = 0; i < 0xFFFFFF; i++) ;
+    }
+}
+
+void sys_show(char* str, char color)
+{
+    // do_syscall(2, str, color);
+    const unsigned long sys_gate_addr[] = {0, SYS_CALL_SEG};  // 使用特权级0
+
+    // 采用调用门, 这里只支持5个参数
+    // 用调用门的好处是会自动将参数复制到内核栈中，这样内核代码很好取参数
+    // 而如果采用寄存器传递，取参比较困难，需要先压栈再取
+    __asm__ __volatile__("push %[color];    push %[str];      push %[id];       lcalll *(%[gate])\n\n "
+            ::[color]"m"(color), [str]"m"(str), [id]"r"(2), [gate]"r"(sys_gate_addr));
+}
+
 void task0()
 {
-    uint8_t color = 0;
-
+    char * str = "task b: 1234";
+    uint8_t color = 0xff;
     for (;;)
     {
-        color--;
+        sys_show(str, color++);
     }
 }
 
 void task1()
 {
-    uint8_t color = 0xff;
-
+    char * str = "task a: 5678";
+    uint8_t color = 0;
     for (;;)
     {
-        color--;
+        sys_show(str, color--);
     }
 }
+
+
 
 #define MAP_ADDR        (0x80000000)            // 要映射的地址
 // 设置页表项 PS: 这里根据手册32-bit page，不启用二级页表, 只使用1级页表映射物理内存就好
@@ -109,6 +145,9 @@ struct { uint16_t limit_l, base_l, basehl_attr, base_limit;} gdt_table[256] __at
     // 两个进程的task0和tas1的tss段:自己设置，直接写会编译报错
     [TASK0_TSS_SEG/ 8] = {0x0068, 0, 0xe900, 0x0},
     [TASK1_TSS_SEG/ 8] = {0x0068, 0, 0xe900, 0x0},
+
+    // 系统调用的调用门, 在init中初始化
+    [SYS_CALL_SEG / 8] = {0x0000, KERNEL_CODE_SEG, 0xec03, 0x0000},
 };
 
 
@@ -153,7 +192,7 @@ void os_init (void) {
     // 添加任务和系统调用
     gdt_table[TASK0_TSS_SEG / 8].base_l = (uint16_t)(uint32_t)task0_tss;
     gdt_table[TASK1_TSS_SEG / 8].base_l = (uint16_t)(uint32_t)task1_tss;
-
+    gdt_table[SYS_CALL_SEG/ 8].limit_l = (uint16_t)(uint32_t)syscall_handler;
 
     // 页目录表的第一项做恒等映射，不对应二级页表
     // 页目录表的第512项指向对应的二级页表，二级页表对应map_phy_buffer的地址
