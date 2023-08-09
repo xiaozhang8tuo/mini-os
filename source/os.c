@@ -87,6 +87,22 @@ uint32_t pg_dir[1024] __attribute__((aligned(4096))) = {
  */
 uint32_t task0_dpl0_stack[1024], task0_dpl3_stack[1024], task1_dpl0_stack[1024], task1_dpl3_stack[1024];
 
+struct {uint16_t limit_l, base_l, basehl_attr, base_limit;}task0_ldt_table[2] __attribute__((aligned(8))) = {
+    // 0x00cffa000000ffff - 从0地址开始，P存在，DPL=3，Type=非系统段，32位代码段，界限4G
+    [TASK_CODE_SEG/ 8] = {0xffff, 0x0000, 0xfa00, 0x00cf},
+    // 0x00cff3000000ffff - 从0地址开始，P存在，DPL=3，Type=非系统段，数据段，界限4G，可读写
+    [TASK_DATA_SEG/ 8] = {0xffff, 0x0000, 0xf300, 0x00cf},
+};
+
+struct {uint16_t limit_l, base_l, basehl_attr, base_limit;}task1_ldt_table[2] __attribute__((aligned(8))) = {
+   // 0x00cffa000000ffff - 从0地址开始，P存在，DPL=3，Type=非系统段，32位代码段，界限4G
+    [TASK_CODE_SEG/ 8] = {0xffff, 0x0000, 0xfa00, 0x00cf},
+    // 0x00cff3000000ffff - 从0地址开始，P存在，DPL=3，Type=非系统段，数据段，界限4G，可读写
+    [TASK_DATA_SEG/ 8] = {0xffff, 0x0000, 0xf300, 0x00cf},
+};
+
+
+
 /**
  * @brief 任务0的任务状态段
  */
@@ -96,7 +112,7 @@ uint32_t task0_tss[] = {
     // cr3, eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi,
     (uint32_t)pg_dir,  (uint32_t)task0/*入口地址*/, 0x202, 0xa, 0xc, 0xd, 0xb, (uint32_t)task0_dpl3_stack + 4*1024/* 栈 */, 0x1, 0x2, 0x3,
     // es, cs, ss, ds, fs, gs, ldt, iomap
-    APP_DATA_SEG, APP_CODE_SEG, APP_DATA_SEG, APP_DATA_SEG, APP_DATA_SEG, APP_DATA_SEG, 0x0, 0x0,
+    TASK_DATA_SEG, TASK_CODE_SEG, TASK_DATA_SEG, TASK_DATA_SEG, TASK_DATA_SEG, TASK_DATA_SEG, TASK0_LDT_SEG, 0x0,
 };
 
 uint32_t task1_tss[] = {
@@ -105,7 +121,7 @@ uint32_t task1_tss[] = {
     // cr3, eip, eflags, eax, ecx, edx, ebx, esp, ebp, esi, edi,
     (uint32_t)pg_dir,  (uint32_t)task1/*入口地址*/, 0x202, 0xa, 0xc, 0xd, 0xb, (uint32_t)task1_dpl3_stack + 4*1024/* 栈 */, 0x1, 0x2, 0x3,
     // es, cs, ss, ds, fs, gs, ldt, iomap
-    APP_DATA_SEG, APP_CODE_SEG, APP_DATA_SEG, APP_DATA_SEG, APP_DATA_SEG, APP_DATA_SEG, 0x0, 0x0,
+    TASK_DATA_SEG, TASK_CODE_SEG, TASK_DATA_SEG, TASK_DATA_SEG, TASK_DATA_SEG, TASK_DATA_SEG, TASK1_LDT_SEG, 0x0,
 };
 
 
@@ -148,6 +164,10 @@ struct { uint16_t limit_l, base_l, basehl_attr, base_limit;} gdt_table[256] __at
 
     // 系统调用的调用门, 在init中初始化
     [SYS_CALL_SEG / 8] = {0x0000, KERNEL_CODE_SEG, 0xec03, 0x0000},
+
+    // 两个任务的LDT
+    [TASK0_LDT_SEG / 8] = {sizeof(task0_ldt_table) - 1, (uint32_t)0, 0xe200, 0x00cf},
+    [TASK1_LDT_SEG / 8] = {sizeof(task0_ldt_table) - 1, (uint32_t)0, 0xe200, 0x00cf},
 };
 
 
@@ -193,6 +213,9 @@ void os_init (void) {
     gdt_table[TASK0_TSS_SEG / 8].base_l = (uint16_t)(uint32_t)task0_tss;
     gdt_table[TASK1_TSS_SEG / 8].base_l = (uint16_t)(uint32_t)task1_tss;
     gdt_table[SYS_CALL_SEG/ 8].limit_l = (uint16_t)(uint32_t)syscall_handler;
+    gdt_table[TASK0_LDT_SEG / 8].base_l = (uint32_t)task0_ldt_table;
+    gdt_table[TASK1_LDT_SEG / 8].base_l = (uint32_t)task1_ldt_table;
+
 
     // 页目录表的第一项做恒等映射，不对应二级页表
     // 页目录表的第512项指向对应的二级页表，二级页表对应map_phy_buffer的地址
