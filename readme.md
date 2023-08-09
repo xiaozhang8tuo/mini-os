@@ -88,3 +88,42 @@ void task_sched (void) {
 }
 ```
 
+## 3完整的一次系统调用 ##
+
+1 用户态发起系统调用
+
+```cpp
+void sys_show(char* str, char color)
+{
+    const unsigned long sys_gate_addr[] = {0, SYS_CALL_SEG};  // 使用特权级0
+    __asm__ __volatile__("push %[color];    push %[str];      push %[id];       lcalll *(%[gate])\n\n "
+            ::[color]"m"(color), [str]"m"(str), [id]"r"(2), [gate]"r"(sys_gate_addr));
+}
+```
+
+2 调用系统调用表先前已经注册好的系统调用处理函数
+
+```cpp
+gdt_table[SYS_CALL_SEG/ 8].limit_l = (uint16_t)(uint32_t)syscall_handler;
+```
+
+3 保护现场，把参数依次压入栈中，**call**调用真正的do_syscall
+
+```assembly
+syscall_handler:
+    push %ds
+	pusha						# 保护现场，段寄存器不用保存
+	mov $KERNEL_DATA_SEG, %ax
+	mov %ax, %ds				#  Push AX, CX, DX, BX, original SP, BP, SI, and DI.
+
+    mov %esp, %ebp				# 下面压栈时,esp会不断变化,所以使用ebp作为基址
+	push 13*4(%ebp)				# 提取出原压入的各项参数,再按相同的顺序压入一遍
+	push 12*4(%ebp)
+	push 11*4(%ebp)
+	call do_syscall				# 调用api函数,注意这时是在特级0的模式下运行,可以做很多有需要高权限才能做的事
+    add $(3*4), %esp			# 取消刚才压入的值
+	popa						# 恢复现场
+	pop %ds
+	retf $(3*4)					# 使用远跳转
+```
+

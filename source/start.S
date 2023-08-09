@@ -77,13 +77,17 @@ _start_32:
 
     mov $TASK0_TSS_SEG, %ax
     ltr %ax                     # 将任务0的TSS段选择符加载到任务寄存器tr。只明确加这一次，以后新任务LDT的加截，是CPU根据TSS中的LDT项自动加载。
+    # mov $TASK0_LDT_SEG, %ax		# 加载任务0的LDT
+	# lldt %ax
 
 	# 下面模拟中断返回，从而实现从特权级0到特权级3的变化
 	# 中断发生时，会自动压入原SS, ESP, EFLAGS, CS, EIP到栈中
-	push $APP_DATA_SEG
+	# push $APP_DATA_SEG
+    push $TASK_DATA_SEG
 	push $task0_dpl3_stack + 1024	# 特权级3时的栈, 
 	push $0x202			# 中断暂时关掉 0x202						# EFLAGS 标值寄存器的中断允许IF置位
-	push $APP_CODE_SEG				# CPL=3时的选择子
+	# push $APP_CODE_SEG				# CPL=3时的选择子
+    push $TASK_CODE_SEG
 	push $task_0_entry					# eip
 	iret							# 从中断返回，将切换至任务0
 
