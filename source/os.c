@@ -158,12 +158,12 @@ struct { uint16_t limit_l, base_l, basehl_attr, base_limit;} gdt_table[256] __at
     // 0x00cff3000000ffff - 从0地址开始，P存在，DPL=3，Type=非系统段，数据段，界限4G，可读写
     [APP_DATA_SEG/ 8] = {0xffff, 0x0000, 0xf300, 0x00cf},
 
+    // 系统调用的调用门, 在init中初始化
+    [SYS_CALL_SEG / 8] = {0x0000, KERNEL_CODE_SEG, 0xec03, 0x0000},
+
     // 两个进程的task0和tas1的tss段:自己设置，直接写会编译报错
     [TASK0_TSS_SEG/ 8] = {0x0068, 0, 0xe900, 0x0},
     [TASK1_TSS_SEG/ 8] = {0x0068, 0, 0xe900, 0x0},
-
-    // 系统调用的调用门, 在init中初始化
-    [SYS_CALL_SEG / 8] = {0x0000, KERNEL_CODE_SEG, 0xec03, 0x0000},
 
     // 两个任务的LDT
     [TASK0_LDT_SEG / 8] = {sizeof(task0_ldt_table) - 1, (uint32_t)0, 0xe200, 0x00cf},
