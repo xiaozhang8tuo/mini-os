@@ -1,6 +1,6 @@
 # 框架 #
 
-![框架图](./arch/arch.svg)
+![框架图](./mini-os/arch/arch.svg)
 
 
 # 调试过程 #
