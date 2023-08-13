@@ -49,21 +49,23 @@
             ],
             // gdb连接后的设置
             "postRemoteConnectCommands": [
+                //-file-symbol-file 命令用于加载一个符号文件，add-symbol-file 命令用于添加一个符号文件到调试会话中
                 {
                     "description": "加载boot符号文件",
                     "text": "-file-symbol-file ./build/source/boot/boot.elf",
                     "ignoreFailures": false
                 },       
+                {
+                    "description": "加载load符号文件",
+                    "text": "add-symbol-file ./build/source/loader/loader.elf 0x8000",
+                    "ignoreFailures": false
+                },
                 // {
                 //     "description": "加载内核符号文件",
                 //      "text": "add-symbol-file ./build/source/kernel/kernel.elf 0x10000",
                 //     "ignoreFailures": false
                 // },
-                // {
-                //     "description": "加载load符号文件",
-                //     "text": "add-symbol-file ./build/source/loader/loader.elf 0x8000",
-                //     "ignoreFailures": false
-                // },
+
                 // {
                 //     "description": "加载boot符号文件",
                 //     "text": "add-symbol-file ./build/source/boot/boot.elf 0x7c00",
