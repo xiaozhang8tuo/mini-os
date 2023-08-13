@@ -31,6 +31,10 @@
 
 1 debug时配置的类型cppdbg不受支持，重启vscodec/c++扩展
 
+2 VSCode调试debug变量variables窗口空白不显示
+
+![image-20230813114802059](.assets/image-20230813114802059.png)
+
 # Q&A #
 
 ## 0 保护模式是怎么进入的 ##
