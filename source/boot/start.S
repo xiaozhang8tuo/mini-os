@@ -24,6 +24,15 @@ _start:
 	mov $'L', %al
 	int $0x10
 
+read_loader:
+	mov $0x8000, %bx # 把boot后面的loader程序扇区读入到0x8000处
+	mov $0x2, %ah
+	mov $0x2, %cx
+	mov $64, %al
+	mov $0x0080, %dx
+	int $0x13
+	jc read_loader
+
 	jmp .
 	
 	# 引导结束段
