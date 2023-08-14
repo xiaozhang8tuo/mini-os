@@ -23,3 +23,8 @@ add_custom_command(TARGET ${PROJECT_NAME}
                    COMMAND ${OBJDUMP_TOOL} -x -d -S -m i8086 ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.elf > ${PROJECT_NAME}_dis.txt
                    COMMAND ${READELF_TOOL} -a ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.elf > ${PROJECT_NAME}_elf.txt
 )
+
+# -x：此选项使 objdump 显示附加的文件头信息，包括与目标文件相关的一些信息。
+# -d：这个选项告诉 objdump 显示目标文件的反汇编代码，显示程序的机器码指令以及对应的汇编指令。
+# -S：此选项使 objdump 不仅显示反汇编代码，还将源代码与反汇编代码一起显示，这样可以更容易地理解反汇编代码的上下文。
+# -m i8086：这个选项指定了目标架构为 Intel 8086，这是一种早期的 x86 架构，用于解析适用于该架构的机器码和指令。
