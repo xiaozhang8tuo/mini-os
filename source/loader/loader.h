@@ -3,6 +3,9 @@
 
 #include "comm/boot_info.h"
 #include "comm/types.h"
+#include "comm/cpu_instr.h"
+
+void protect_mode_entry (void);
 
 // 内存检测信息结构
 typedef struct SMAP_entry {
