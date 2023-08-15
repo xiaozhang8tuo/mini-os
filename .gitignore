@@ -33,6 +33,7 @@
 *.app
 
 image
+build
 *.elf 
 *.o 
 *.bin 

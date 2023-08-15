@@ -1,3 +1,13 @@
 {
-    "C_Cpp.default.compilerPath": "/usr/bin/g++"
+    "cmake.configureOnOpen": false,
+    "cmake.sourceDirectory": "${workspaceFolder}/.",
+    "C_Cpp.errorSquiggles": "Disabled",
+    "files.associations": {
+        "dirent.h": "c",
+        "lib_syscall.h": "c",
+        "task.h": "c",
+        "types.h": "c",
+        "fcntl.h": "c",
+        "_default_fcntl.h": "c"
+    },
 }
