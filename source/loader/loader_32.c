@@ -39,6 +39,6 @@ void load_kernel(void) {
     // 只读了100个扇区，结果运行后发现kernel的一些初始化的变量值为空，程序也会跑飞
     // 从100个扇区开始读500个扇区
     read_disk(100, 500, (uint8_t *)SYS_KERNEL_LOAD_ADDR);
-    //((void (*)(boot_info_t *))SYS_KERNEL_LOAD_ADDR)(&boot_info);
+    ((void (*)(void))SYS_KERNEL_LOAD_ADDR)();
     for (;;) {}
 }
