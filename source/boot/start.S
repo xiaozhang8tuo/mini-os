@@ -21,9 +21,9 @@ _start:
 
 	mov $_start, %esp
 
-	mov $0xe, %ah
-	mov $'L', %al
-	int $0x10
+	# mov $0xe, %ah
+	# mov $'L', %al
+	# int $0x10
 
 read_loader:
 	mov $0x8000, %bx # 把boot后面的loader程序扇区读入到0x8000处
