@@ -1,5 +1,5 @@
 #include "init.h"
-
-void kernel_init(void) {
+#include "comm/boot_info.h"
+void kernel_init(boot_info_t* boot_info) {
     
 }

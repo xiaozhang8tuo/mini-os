@@ -2,7 +2,7 @@ __asm__(".code16gcc");
 
 #include "loader.h"
 
-static boot_info_t boot_info;
+boot_info_t boot_info;
 
 /**
  * BIOS下显示字符串
