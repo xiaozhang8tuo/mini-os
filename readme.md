@@ -322,6 +322,42 @@ int15 读取内存 大约在128M
 
 ![image-20240517002721268](.assets/image-20240517002721268.png)
 
+## 11 加载bin文件转为加载elf文件 ##
+
+```cpp
+# 写kernel区，定位到磁盘第100个块
+dd if=kernel.elf of=$DISK1_NAME bs=512 conv=notrunc seek=100
+    
+# 读磁盘的第100个块，放到内存中的0x100000 16^5 = 2^20 = 1M
+read_disk(100, 500, (uint8_t *)SYS_KERNEL_LOAD_ADDR);
+
+# 解析内存中的0x100000的elf文件，按照elf文件的分配(*.lds的设置)，把kernel放到0x10000处
+uint32_t kernel_entry = reload_elf_file((uint8_t *)SYS_KERNEL_LOAD_ADDR);
+
+gdb加载内核符号文件的位置也要跟着变化
+```
+
+
+
+![image-20240519230643753](.assets/image-20240519230643753.png)
+
+因为elf文件相比bin文件占据的空间要小很多，可以根据elf文件的指示，在load的时候把对应数据段放入内存中的对应位置。
+
+```cpp
+COMMAND ${OBJCOPY_TOOL} -S ${PROJECT_NAME}.elf ${CMAKE_SOURCE_DIR}/image/${PROJECT_NAME}.elf
+COMMAND ${OBJCOPY_TOOL} -O binary ${PROJECT_NAME}.elf ${CMAKE_SOURCE_DIR}/image/${PROJECT_NAME}.elf
+```
+
+
+
+![image-20240519223229779](.assets/image-20240519223229779.png)
+
+
+
+gdb查看改地址的16位表示，就是新修改的位置0x10000
+
+![image-20240519231442830](.assets/image-20240519231442830.png)
+
 # OS #
 
 ![image-20230813211151879](.assets/image-20230813211151879.png)

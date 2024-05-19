@@ -1,5 +1,5 @@
 #include "loader.h"
-
+#include "comm/elf.h"
 /**
 * 使用LBA48位模式读取磁盘
 */
@@ -31,6 +31,43 @@ static void read_disk(int sector, int sector_count, uint8_t * buf) {
 	}
 }
 
+static uint32_t read_elf_file (uint8_t * file_buffer) {
+    // 读取的只是ELF文件，不像BIN那样可直接运行，需要从中加载出有效数据和代码
+    // 简单判断是否是合法的ELF文件
+    Elf32_Ehdr * elf_hdr = (Elf32_Ehdr *)file_buffer;
+    if ((elf_hdr->e_ident[0] != ELF_MAGIC) || (elf_hdr->e_ident[1] != 'E')
+        || (elf_hdr->e_ident[2] != 'L') || (elf_hdr->e_ident[3] != 'F')) {
+        return 0;
+    }
+
+    // 然后从中加载程序头，将内容拷贝到相应的位置
+    for (int i = 0; i < elf_hdr->e_phnum; i++) {
+        Elf32_Phdr * phdr = (Elf32_Phdr *)(file_buffer + elf_hdr->e_phoff) + i;
+        if (phdr->p_type != PT_LOAD) {
+            continue;
+        }
+
+		// 全部使用物理地址，此时分页机制还未打开
+        uint8_t * src = file_buffer + phdr->p_offset;
+        uint8_t * dest = (uint8_t *)phdr->p_paddr;
+        for (int j = 0; j < phdr->p_filesz; j++) {
+            *dest++ = *src++;
+        }
+
+		// memsz和filesz不同时，后续要填0
+		dest= (uint8_t *)phdr->p_paddr + phdr->p_filesz;
+		for (int j = 0; j < phdr->p_memsz - phdr->p_filesz; j++) {
+			*dest++ = 0;
+		}
+    }
+
+    return elf_hdr->e_entry;
+}
+
+static void die(int code) {
+	for(;;) {}
+}
+
 /**
  * 从磁盘上加载内核
  */
@@ -39,6 +76,12 @@ void load_kernel(void) {
     // 只读了100个扇区，结果运行后发现kernel的一些初始化的变量值为空，程序也会跑飞
     // 从100个扇区开始读500个扇区 // dd if=kernel.elf of=$DISK1_NAME bs=512 conv=notrunc seek=100 因为内核文件通过dd写入镜像的位置就是100个扇区开始
     read_disk(100, 500, (uint8_t *)SYS_KERNEL_LOAD_ADDR);
-    ((void (*)(boot_info_t* ))SYS_KERNEL_LOAD_ADDR)(&boot_info);
+	uint32_t kernel_entry = read_elf_file((uint8_t*)SYS_KERNEL_LOAD_ADDR);
+	if (kernel_entry == 0) {
+		die(-1);
+	}
+
+
+    ((void (*)(boot_info_t* ))kernel_entry)(&boot_info);
     for (;;) {}
 }
