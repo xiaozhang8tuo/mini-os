@@ -4,7 +4,7 @@
 
 static segment_desc_t gdt_table[GDT_TABLE_SIZE];
 
-void segment_desc_set (int selector, uint32_t base, uint32_t limit, uint32_t attr) {
+void segment_desc_set (int selector, uint32_t base, uint32_t limit, uint16_t attr) {
     segment_desc_t* desc = gdt_table + (selector >> 3);
 
     if (limit > 0xFFFFF) {
@@ -25,11 +25,15 @@ void init_gdt (void) {
         segment_desc_set(i << 3, 0, 0, 0);
     }
 
-    segment_desc_set(KERNEL_SELECTOR_CS, 0, 0xFFFFFFFF, );
-    segment_desc_set(KERNEL_SELECTOR_DS, 0, 0xFFFFFFFF, );
+    segment_desc_set(KERNEL_SELECTOR_CS, 0, 0xFFFFFFFF, 
+        SEG_P_PRESENT | SEG_DPL0 | SEG_S_NORMAL | SEG_TYPE_CODE | SEG_TYPE_RW | SEG_D);
+    segment_desc_set(KERNEL_SELECTOR_DS, 0, 0xFFFFFFFF, 
+        SEG_P_PRESENT | SEG_DPL0 | SEG_S_NORMAL | SEG_TYPE_DATA | SEG_TYPE_RW | SEG_D);
 
     lgdt((uint32_t)gdt_table, sizeof(gdt_table));
-
+    // 调用 lgdt 指令是加载全局描述符表（GDT）到CPU的GDTR寄存器中。
+    // lgdt 指令本身只负责更新GDTR寄存器，它不涉及更改当前活动的段寄存器（如CS、DS、ES等）。
+    // 因此，一旦新的GDT被加载，你需要执行额外的步骤即(gdt_reload)来告诉CPU使用新的GDT中的段描述符
 }
 
 void cpu_init (void) {

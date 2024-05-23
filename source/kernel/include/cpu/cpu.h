@@ -38,6 +38,6 @@ typedef struct _segment_desc_t {
 #define SEG_TYPE_RW (1 << 1)
 
 void cpu_init (void);
-void segment_desc_set (int selector, uint32_t base, uint32_t limit, uint32_t attr);
+void segment_desc_set (int selector, uint32_t base, uint32_t limit, uint16_t attr);
 
 #endif

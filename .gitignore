@@ -40,3 +40,4 @@ build
 os_dis.txt 
 os_elf.txt 
 **/start.s
+/source_tmp
