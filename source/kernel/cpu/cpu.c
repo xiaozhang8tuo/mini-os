@@ -4,6 +4,8 @@
 
 static segment_desc_t gdt_table[GDT_TABLE_SIZE];
 
+
+/*设置段描述符*/
 void segment_desc_set (int selector, uint32_t base, uint32_t limit, uint16_t attr) {
     segment_desc_t* desc = gdt_table + (selector >> 3);
 
@@ -19,6 +21,15 @@ void segment_desc_set (int selector, uint32_t base, uint32_t limit, uint16_t att
     desc->attr = attr | (((limit >> 16) & 0xF) << 8);
     desc->base31_24 = (base >> 24) & 0XFF;
 }
+
+/*初始化 中断向量表表项*/
+void gate_desc_set (gate_desc_t* desc, uint16_t selector, uint32_t offset, uint16_t attr) {
+    desc->offset15_0 = offset & 0xFFFF;
+    desc->selector = selector;
+    desc->attr = attr;
+    desc->offset31_16 = (offset >> 16) & 0xFFFF;
+}
+
 
 void init_gdt (void) {
     for (int i=0; i< GDT_TABLE_SIZE; i++) {
