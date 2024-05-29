@@ -38,3 +38,29 @@ gdt_reload:
 
 	.bss
 .comm stack, KERNEL_STACK_SIZE    # comm 声明未初始化的通用内存区域，以字节计
+
+
+    .text
+    .extern do_handler_unknow
+    .global exception_handler_unknow
+exception_handler_unknow:
+    # 保存所有寄存器
+    pusha # push general-purpose registers Figure 3-4
+    push %ds
+    push %es
+    push %fs
+    push %gs
+    
+    # 调用中断处理函数
+    push %esp
+    call do_handler_unknow
+    add $(1*4), %esp # 丢掉esp
+    
+    # 恢复保存的寄存器
+    pop %gs
+    pop %fs
+    pop %es
+    pop %ds
+    popa
+
+    iret

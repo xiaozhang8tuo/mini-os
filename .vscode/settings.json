@@ -11,6 +11,8 @@
         "_default_fcntl.h": "c",
         "loader.h": "c",
         "boot_info.h": "c",
-        "cpu_instr.h": "c"
+        "cpu_instr.h": "c",
+        "irq.h": "c",
+        "cpu.h": "c"
     },
 }
