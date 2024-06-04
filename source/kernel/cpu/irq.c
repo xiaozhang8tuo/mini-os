@@ -221,3 +221,14 @@ void irq_disable_global (void) {
 void irq_enable_global (void) {
     sti();
 }
+
+void pic_send_eoi(int irq_num) {
+    irq_num -= IRQ_PIC_START;
+
+    // 从片也可能需要发送EOI
+    if (irq_num >= 8) {
+        outb(PIC1_OCW2, PIC_OCW2_EOI);
+    }
+
+    outb(PIC0_OCW2, PIC_OCW2_EOI);
+}

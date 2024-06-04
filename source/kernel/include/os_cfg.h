@@ -8,4 +8,6 @@
 
 #define KERNEL_STACK_SIZE (8 * 1024)
 
+#define OS_TICKS_MS 10
+
 #endif

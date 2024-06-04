@@ -23,6 +23,8 @@
 #define IRQ19_XM            19
 #define IRQ20_VE            20
 
+#define IRQ0_TIMER          0x20
+
 // PIC控制器相关的寄存器及位配置
 #define PIC0_ICW1			0x20
 #define PIC0_ICW2			0x21
@@ -43,6 +45,7 @@
 #define PIC_ICW4_8086	    (1 << 0)        // 8086工作模式
 
 #define IRQ_PIC_START		0x20			// PIC中断起始号
+#define PIC_OCW2_EOI (1<<5)
 
 
 typedef struct exception_frame_t {
@@ -61,5 +64,8 @@ void irq_enable(int irq_num);
 void irq_disable(int irq_num);
 void irq_disable_global (void);
 void irq_enable_global (void);
+
+void pic_send_eoi(int irq_num);
+
 
 #endif 
