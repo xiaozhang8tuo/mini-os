@@ -1,6 +1,6 @@
 #ifndef CPU_INSTR_H
 #define CPU_INSTR_H
-
+#include "comm/types.h"
 // inb 用于读取对应port中的字节
 static inline uint8_t inb(uint16_t port)
 {

@@ -16,6 +16,7 @@
         "cpu.h": "c",
         "time.h": "c",
         "timer.h": "c",
-        "os_cfg.h": "c"
+        "os_cfg.h": "c",
+        "stdarg.h": "c"
     },
 }
