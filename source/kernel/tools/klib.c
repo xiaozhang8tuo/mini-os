@@ -107,6 +107,48 @@ int kernel_memcmp (void * d1, void * d2, int size) {
 	return 0;
 }
 
+void kernel_itoa(char* buf, int num, int base) {
+    static const char* num2ch = {"0123456789ABCDEF"};
+    char* p = buf;
+    int old_num = num;
+    
+    if ((base != 2) && (base != 8) && (base != 10) && (base != 16)) {
+        *p = '\0';
+        return;
+    }
+
+    if ((num < 0) && (base == 10)) {
+        *p++ = '-';
+        num = -num;
+    }
+
+    do {
+        char ch = num2ch[num % base];
+        *p++ = ch;
+        num = num/base;
+
+    } while (num);
+    *p-- = '\0';
+
+    char* start = (old_num > 0) ? buf : buf+1;
+    while(start < p) {
+        char ch = *start;
+        *start = *p;
+        *p = ch;
+
+        p--;
+        start++;
+    }
+}
+
+
+void kernel_sprintf(char* str_buf, const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    kernel_vsprintf(str_buf, fmt, args);
+    va_end(args);
+}
+
 
 void kernel_vsprintf(char* str_buf, const char* fmt, va_list args) {
     enum {NORMAL, READ_FMT} state = NORMAL;
@@ -125,7 +167,18 @@ void kernel_vsprintf(char* str_buf, const char* fmt, va_list args) {
             }
             break;
         case READ_FMT:
-            if (ch == 's') {
+            if (ch == 'd') {
+                int num = va_arg(args, int);
+                kernel_itoa(cur, num, 10);
+                cur += kernel_strlen(cur);
+            } else if (ch == 'x') {
+                int num = va_arg(args, int);
+                kernel_itoa(cur, num, 16);
+                cur += kernel_strlen(cur);
+            } else if (ch == 'c') {
+                char c = va_arg(args, int);
+                *cur++ = c;
+            } else if (ch == 's') {
                 const char* str = va_arg(args, char*);
                 int len = kernel_strlen(str);
                 while(len--){
