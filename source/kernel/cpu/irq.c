@@ -2,6 +2,7 @@
 #include "cpu/cpu.h"
 #include "comm/cpu_instr.h"
 #include "os_cfg.h"
+#include "tools/log.h"
 #define IDT_TABLE_NR 128
 
 void exception_handler_unknow(void);
@@ -25,7 +26,30 @@ void exception_handler_machine_check (void);
 void exception_handler_simd_exception (void);
 void exception_handler_virtual_exception (void);
 
+void dump_core_regs(exception_frame_t* frame) {
+    log_printf("IRQ: %d, error_code: %d", frame->num, frame->error_code);
+    log_printf("CS: %d\r\n"
+                "DS:%d\r\n"
+                "ES:%d\r\n"
+                "FS:%d\r\n"
+                "GS:%d\r\n"
+                , frame->cs, frame->ds, frame->es, frame->fs, frame->gs);
+    log_printf( "EAX: 0X%x\r\n"
+                "EBX: 0X%x\r\n"
+                "EDX: 0X%x\r\n"
+                "EDI: 0X%x\r\n"
+                "ESI: 0X%x\r\n"
+                "EBP: 0X%x\r\n"
+                "ESP: 0X%x\r\n"
+                , frame->eax, frame->ebx, frame->edx, frame->edi, frame->esi, frame->ebp, frame->esp);
+    log_printf("EIP: 0x%x\r\nEFLAGS:0x%x", frame->eip, frame->eflags);
+}
+
 static void do_default_handler (exception_frame_t* frame, const char* message) {
+    log_printf("------------------------");
+    log_printf("IRQ/Exception happend: %s", message);
+    dump_core_regs(frame);
+
     for (;;) {
         hlt();
     }
