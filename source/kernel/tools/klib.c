@@ -1,5 +1,6 @@
 #include "tools/klib.h"
-
+#include "tools/log.h"
+#include "comm/cpu_instr.h"
 
 void kernel_strcpy (char * dest, const char * src) {
     if (!dest || !src) {
@@ -191,4 +192,12 @@ void kernel_vsprintf(char* str_buf, const char* fmt, va_list args) {
             break;
         }
     }
+}
+
+
+void pannic (const char* file, int line, const char* func, const char* expr) {
+    log_printf("ASSERT FAILED cond: %s", expr);
+    log_printf("file: %s\r\nline: %d\r\nfunc: %s\r\n", file, line, func);
+    for (;;)
+        hlt();
 }
