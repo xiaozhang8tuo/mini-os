@@ -102,4 +102,9 @@ static inline void hlt(void) {
 	__asm__ __volatile__("hlt");
 }
 
+// 设置tr寄存器，表示当然执行的任务
+static inline void write_tr (uint16_t tss_sel) {
+    __asm__ __volatile__ ("ltr %%ax"::"a"(tss_sel));
+}
+
 #endif
