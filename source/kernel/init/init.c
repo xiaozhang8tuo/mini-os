@@ -39,7 +39,7 @@ void init_main(void) {
     // int a = 3/0;
     // irq_enable_global(); // 设置了8259之后还要这样开启全局中断
 
-    task_init(&init_task, (uint32_t)init_task_entry, (uint32_t)&init_task_stack[1024]);
+    task_init(&init_task, (uint32_t)init_task_entry, (uint32_t)&init_task_stack[1024]);//这里取底部是因为，恢复现场时，栈需要pop的时候是从底往上的
     task_init(&first_task, 0, 0);
     write_tr(first_task.tss_sel);
 

@@ -95,3 +95,26 @@ exception_handler simd_exception, 19, 0
 exception_handler virtual_exception, 20, 0
 
 exception_handler timer, 0x20, 0
+
+    // simple_switch(&from, to)
+    .text
+    .global simple_switch
+simple_switch:
+    mov 4(%esp), %eax //from
+    mov 8(%esp), %edx //to
+
+    // save old
+    push %ebp
+    push %ebx
+    push %esi
+    push %edi
+    mov %esp, (%eax) // 保存好现场栈之后,让旧任务指向这个栈
+
+    // load new
+    mov %edx, %esp //指向新的任务的栈
+    pop %edi
+    pop %esi
+    pop %ebx
+    pop %ebp
+
+    ret
