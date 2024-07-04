@@ -84,3 +84,35 @@ void task_set_ready(task_t* task) {
 void task_set_block(task_t* task) {
     list_remove(&task_manager.ready_list, &task->run_node);
 }
+
+task_t * taks_next_run(void) {
+    list_node_t* task_node = list_first(&task_manager.ready_list);
+    return list_node_parent(task_node, task_t, run_node);
+}
+
+task_t * task_current(void) {
+    return task_manager.curr_task;
+}
+
+static void task_dispatch(void) {
+    task_t* to = taks_next_run();
+    if (to != task_manager.curr_task) {
+        task_t* from = task_current();
+        task_manager.curr_task = to;
+        to->state = TASK_RUNNING;
+
+        task_switch_from_to(from, to);
+    }
+}
+
+int sys_sched_yield(void) {
+    if (list_count(&task_manager.ready_list) > 1) {
+        task_t* curr_task = task_current();
+
+        task_set_block(curr_task);
+        task_set_ready(curr_task);
+
+        task_dispatch();
+    }
+    return 0;
+}
