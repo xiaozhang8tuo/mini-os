@@ -18,6 +18,8 @@ void kernel_init(boot_info_t* boot_info) {
     log_init();
     irq_init();
     timer_init();
+
+    task_manager_init();
 }
 
 static task_t init_task;
@@ -28,7 +30,7 @@ void init_task_entry() {
     int count = 0;
     for (;;) {
         log_printf("init task: %d", count++);
-        task_switch_from_to(&init_task, &first_task);
+        task_switch_from_to(&init_task, task_first_task());
     }
 }
 
@@ -91,7 +93,7 @@ void list_test(void) {
 }
 
 void init_main(void) {
-    list_test();
+    // list_test();
 
     log_printf("Kernerl is runniing");
     log_printf("Version: %s %s", OS_VERSION, "x86 os");
@@ -100,14 +102,13 @@ void init_main(void) {
     // int a = 3/0;
     // irq_enable_global(); // 设置了8259之后还要这样开启全局中断
 
-    task_init(&init_task, (uint32_t)init_task_entry, (uint32_t)&init_task_stack[1024]);//这里取底部是因为，恢复现场时，栈需要pop的时候是从底往上的
-    task_init(&first_task, 0, 0);
-    write_tr(first_task.tss_sel);
+    task_init(&init_task, "init task", (uint32_t)init_task_entry, (uint32_t)&init_task_stack[1024]);//这里取底部是因为，恢复现场时，栈需要pop的时候是从底往上的
+    task_first_init();
 
     int count = 0;
     for (;;) {
         log_printf("int main: %d", count++);
-        task_switch_from_to(&first_task, &init_task);
+        task_switch_from_to(task_first_task(), &init_task);
     }
 
 }

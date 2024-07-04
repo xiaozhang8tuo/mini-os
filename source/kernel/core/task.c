@@ -1,7 +1,11 @@
 #include "core/task.h"
 #include "tools/klib.h"
 #include "os_cfg.h"
+#include "comm/cpu_instr.h"
 
+static task_manager_t task_manager;
+
+// 初始化tss结构,设置入口地址,分配选择子等等
 static int tss_init(task_t* task, uint32_t entry, uint32_t esp) {
     int tss_sel = gdt_alloc_desc();
     if (tss_sel < 0) {
@@ -26,7 +30,7 @@ static int tss_init(task_t* task, uint32_t entry, uint32_t esp) {
     return 0;
 }
 
-int task_init(task_t* task, uint32_t entry, uint32_t esp) {
+int task_init(task_t* task, const char* name, uint32_t entry, uint32_t esp) {
     ASSERT(task != (task_t *)0);
 
     tss_init(task, entry, esp);
@@ -39,7 +43,13 @@ int task_init(task_t* task, uint32_t entry, uint32_t esp) {
     //     *(--pesp) = 0;
     //     task->stack = pesp;
     // }
+    kernel_memcpy(task->name, name, TASK_NAME_SIZE);
+    task->state = TASK_CREATED;
+    list_node_init(&task->all_node);
+    list_node_init(&task->run_node);
 
+    task_set_ready(task);
+    list_insert_last(&task_manager.task_list, &task->all_node);
     return 0;
 }
 
@@ -48,4 +58,29 @@ void simple_switch(uint32_t** from, uint32_t* to);
 void task_switch_from_to(task_t* from, task_t* to) {
     switch_to_tss(to->tss_sel);
     // simple_switch(&from->stack, to->stack);
+}
+
+void task_manager_init(void) {
+    list_init(&task_manager.ready_list);
+    list_init(&task_manager.task_list);
+}
+
+void task_first_init(void) {
+    task_init(&task_manager.first_task, "first task", 0, 0);
+    write_tr(task_manager.first_task.tss_sel);
+    task_manager.curr_task = &task_manager.first_task;
+}
+
+task_t* task_first_task(void) {
+    return &task_manager.first_task;
+}
+
+
+void task_set_ready(task_t* task) {
+    list_insert_last(&task_manager.ready_list, &task->run_node);
+    task->state = TASK_READY;
+}
+
+void task_set_block(task_t* task) {
+    list_remove(&task_manager.ready_list, &task->run_node);
 }
