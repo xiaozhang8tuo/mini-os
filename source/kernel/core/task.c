@@ -45,6 +45,8 @@ int task_init(task_t* task, const char* name, uint32_t entry, uint32_t esp) {
     // }
     kernel_memcpy(task->name, name, TASK_NAME_SIZE);
     task->state = TASK_CREATED;
+    task->time_ticks = TASK_TIME_SLICE_DEFAULT;
+    task->slice_ticks = task->time_ticks;
     list_node_init(&task->all_node);
     list_node_init(&task->run_node);
 
@@ -115,4 +117,16 @@ int sys_sched_yield(void) {
         task_dispatch();
     }
     return 0;
+}
+
+void task_timer_tick(void) {
+    task_t* curr_task = task_current();
+    if (--curr_task->slice_ticks == 0) {
+        curr_task->slice_ticks = curr_task->time_ticks;
+        
+        task_set_block(curr_task);
+        task_set_ready(curr_task);
+
+        task_dispatch();
+    }
 }

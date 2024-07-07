@@ -16,6 +16,7 @@ void do_handler_timer(exception_frame_t* frame) {
     // 放最后将从任务中切换出去之后，除非任务再切换回来才能继续噢应
     // 这样才能让中断按照时间重复触发，否则只有一次
     pic_send_eoi(IRQ0_TIMER);
+    task_timer_tick();
 }
 
 void timer_init (void) {
