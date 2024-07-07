@@ -238,6 +238,17 @@ void irq_disable(int irq_num) {
     }
 }
 
+/*irq_disable_global() 函数的目的是全局禁用中断。
+在x86架构中，cli（Clear Interrupts）指令用于清除中断标志位，从而禁止CPU响应外部硬件中断。这个指令通常在操作系统的内核代码中使用，
+以确保在执行某些关键操作时不会被中断。
+当cli()被执行后：
+CPU将不会响应任何外部硬件中断请求，包括定时器中断。
+这并不意味着定时器停止工作，定时器可能仍然在计数，但是CPU不会接收到相关的中断信号。
+软件中断（如通过int指令触发的中断）也不会被阻止。
+这种全局中断禁用通常用于以下情况：
+系统初始化或关键代码段，需要保证代码的原子性。
+避免中断处理中的递归调用或死锁。
+在某些特定的硬件操作中，可能需要确保在操作完成之前不被中断。*/
 void irq_disable_global (void) {
     cli();
 }
@@ -255,4 +266,14 @@ void pic_send_eoi(int irq_num) {
     }
 
     outb(PIC0_OCW2, PIC_OCW2_EOI);
+}
+
+irq_state_t irq_enter_protection(void) {
+    irq_state_t state = read_eflags();
+    irq_disable_global();
+    return state;
+}
+void irq_leave_protection(irq_state_t state) {
+    write_eflags(state);
+    irq_enable_global();
 }
