@@ -2,7 +2,7 @@
 #include "tools/klib.h"
 #include "os_cfg.h"
 #include "comm/cpu_instr.h"
-
+#include "cpu/irq.h"
 static task_manager_t task_manager;
 
 // 初始化tss结构,设置入口地址,分配选择子等等
@@ -46,12 +46,14 @@ int task_init(task_t* task, const char* name, uint32_t entry, uint32_t esp) {
     kernel_memcpy(task->name, name, TASK_NAME_SIZE);
     task->state = TASK_CREATED;
     task->time_ticks = TASK_TIME_SLICE_DEFAULT;
+    task->sleep_ticks = 0;
     task->slice_ticks = task->time_ticks;
     list_node_init(&task->all_node);
     list_node_init(&task->run_node);
-
+    irq_state_t state = irq_enter_protection();
     task_set_ready(task);
     list_insert_last(&task_manager.task_list, &task->all_node);
+    irq_leave_protection(state);
     return 0;
 }
 
@@ -65,6 +67,7 @@ void task_switch_from_to(task_t* from, task_t* to) {
 void task_manager_init(void) {
     list_init(&task_manager.ready_list);
     list_init(&task_manager.task_list);
+    list_init(&task_manager.sleep_list);
 }
 
 void task_first_init(void) {
@@ -97,6 +100,7 @@ task_t * task_current(void) {
 }
 
 static void task_dispatch(void) {
+    irq_state_t state = irq_enter_protection();
     task_t* to = taks_next_run();
     if (to != task_manager.curr_task) {
         task_t* from = task_current();
@@ -105,9 +109,11 @@ static void task_dispatch(void) {
 
         task_switch_from_to(from, to);
     }
+    irq_leave_protection(state);
 }
 
 int sys_sched_yield(void) {
+    irq_state_t state = irq_enter_protection();
     if (list_count(&task_manager.ready_list) > 1) {
         task_t* curr_task = task_current();
 
@@ -116,6 +122,7 @@ int sys_sched_yield(void) {
 
         task_dispatch();
     }
+    irq_leave_protection(state);
     return 0;
 }
 
@@ -129,4 +136,38 @@ void task_timer_tick(void) {
 
         task_dispatch();
     }
+
+    list_node_t* curr = list_first(&task_manager.sleep_list);
+    while (curr)
+    {
+        list_node_t* next = list_node_next(curr);
+        task_t* task = list_node_parent(curr, task_t, run_node);
+        if (--task->sleep_ticks == 0) {
+            task_set_wakeup(task);
+            task_set_ready(task);
+        }
+        curr = next;
+    }
+    task_dispatch();
+}
+
+void task_set_sleep(task_t* task, uint32_t ticks) {
+    if (ticks == 0) {
+        return;
+    }
+    task->sleep_ticks = ticks;
+    task->state = TASK_SLEEP;
+    list_insert_last(&task_manager.sleep_list, &task->run_node);
+}
+
+void task_set_wakeup(task_t* task) {
+    list_remove(&task_manager.sleep_list, &task->run_node);
+}
+
+void sys_sleep(uint32_t ms) {
+    irq_state_t state = irq_enter_protection();
+    task_set_block(task_manager.curr_task);
+    task_set_sleep(task_manager.curr_task, (ms+OS_TICKS_MS-1)/OS_TICKS_MS);// 向上取整
+    task_dispatch();
+    irq_leave_protection(state);
 }
