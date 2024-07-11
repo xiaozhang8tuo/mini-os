@@ -29,8 +29,9 @@ static task_t first_task;
 void init_task_entry() {
     int count = 0;
     for (;;) {
-        // log_printf("init task: %d", count++);
+        log_printf("init task: %d", count++);
         // sys_sched_yield();
+        sys_sleep(1000);
     }
 }
 
@@ -107,7 +108,7 @@ void init_main(void) {
 
     int count = 0;
     for (;;) {
-        log_printf("int main: %d", count++);
+        log_printf("main task: %d", count++);
         // sys_sched_yield();
         sys_sleep(1000);
     }

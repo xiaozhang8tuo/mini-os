@@ -5,7 +5,7 @@
 #include "cpu/irq.h"
 #include "tools/log.h"
 static task_manager_t task_manager;
-
+static uint32_t idle_task_stack[IDLE_TASK_STACK_SIZE];
 // 初始化tss结构,设置入口地址,分配选择子等等
 static int tss_init(task_t* task, uint32_t entry, uint32_t esp) {
     int tss_sel = gdt_alloc_desc();
@@ -65,10 +65,19 @@ void task_switch_from_to(task_t* from, task_t* to) {
     // simple_switch(&from->stack, to->stack);
 }
 
+static void idle_task_entry (void) {
+    for (;;) {
+        hlt();
+    }
+}
+
 void task_manager_init(void) {
     list_init(&task_manager.ready_list);
     list_init(&task_manager.task_list);
     list_init(&task_manager.sleep_list);
+    task_manager.curr_task = (task_t *)0;
+
+    task_init(&task_manager.idle_task, "idle_task", (uint32_t)idle_task_entry, (uint32_t)(idle_task_stack+IDLE_TASK_STACK_SIZE));
 }
 
 void task_first_init(void) {
@@ -83,15 +92,27 @@ task_t* task_first_task(void) {
 
 
 void task_set_ready(task_t* task) {
+    if (task == &task_manager.idle_task) {
+        return;
+    }
+
     list_insert_last(&task_manager.ready_list, &task->run_node);
     task->state = TASK_READY;
 }
 
 void task_set_block(task_t* task) {
+    if (task == &task_manager.idle_task) {
+        return;
+    }
+
     list_remove(&task_manager.ready_list, &task->run_node);
 }
 
 task_t * taks_next_run(void) {
+    if (list_count(&task_manager.ready_list) == 0) {
+        return &task_manager.idle_task;
+    }
+
     list_node_t* task_node = list_first(&task_manager.ready_list);
     return list_node_parent(task_node, task_t, run_node);
 }
@@ -101,7 +122,7 @@ task_t * task_current(void) {
 }
 
 static void task_dispatch(void) {
-    irq_state_t state = irq_enter_protection();
+    // irq_state_t state = irq_enter_protection();
     task_t* to = taks_next_run();
     if (to != task_manager.curr_task) {
         task_t* from = task_current();
@@ -110,7 +131,7 @@ static void task_dispatch(void) {
 
         task_switch_from_to(from, to);
     }
-    irq_leave_protection(state);
+    // irq_leave_protection(state);
 }
 
 int sys_sched_yield(void) {
