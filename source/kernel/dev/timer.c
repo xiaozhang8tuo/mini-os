@@ -3,7 +3,7 @@
 #include "os_cfg.h"
 #include "cpu/irq.h"
 #include "comm/cpu_instr.h"
-
+#include "core/task.h"
 
 static uint32_t sys_tick;
 

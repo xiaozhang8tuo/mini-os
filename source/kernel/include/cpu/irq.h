@@ -58,7 +58,7 @@ typedef struct exception_frame_t {
 typedef void (*irq_handler_t) (void);
 
 void irq_init(void);
-void irq_install(int num, irq_handler_t handler);
+int irq_install(int num, irq_handler_t handler);
 
 void irq_enable(int irq_num);
 void irq_disable(int irq_num);

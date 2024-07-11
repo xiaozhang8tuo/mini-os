@@ -3,6 +3,7 @@
 #include "os_cfg.h"
 #include "comm/cpu_instr.h"
 #include "cpu/irq.h"
+#include "tools/log.h"
 static task_manager_t task_manager;
 
 // 初始化tss结构,设置入口地址,分配选择子等等
@@ -43,7 +44,7 @@ int task_init(task_t* task, const char* name, uint32_t entry, uint32_t esp) {
     //     *(--pesp) = 0;
     //     task->stack = pesp;
     // }
-    kernel_memcpy(task->name, name, TASK_NAME_SIZE);
+    kernel_memcpy(task->name, (void*)name, TASK_NAME_SIZE);
     task->state = TASK_CREATED;
     task->time_ticks = TASK_TIME_SLICE_DEFAULT;
     task->sleep_ticks = 0;
