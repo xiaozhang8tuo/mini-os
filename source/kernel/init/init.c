@@ -9,6 +9,7 @@
 #include "tools/klib.h"
 #include "core/task.h"
 #include "tools/list.h"
+#include "ipc/sem.h"
 
 void kernel_init(boot_info_t* boot_info) {
     // ASSERT(boot_info->ram_region_count != 0);
@@ -24,14 +25,15 @@ void kernel_init(boot_info_t* boot_info) {
 
 static task_t init_task;
 static uint32_t init_task_stack[1024];// init_task_entry 的栈
-static task_t first_task;
+static sem_t sem;
 
 void init_task_entry() {
     int count = 0;
     for (;;) {
+        sem_wait(&sem);
         log_printf("init task: %d", count++);
         // sys_sched_yield();
-        sys_sleep(1000);
+        // sys_sleep(1000);
     }
 }
 
@@ -104,11 +106,13 @@ void init_main(void) {
 
     task_init(&init_task, "init task", (uint32_t)init_task_entry, (uint32_t)&init_task_stack[1024]);//这里取底部是因为，恢复现场时，栈需要pop的时候是从底往上的
     task_first_init();
+    sem_init(&sem, 0);
     irq_enable_global(); // 设置了8259之后还要这样开启全局中断
 
     int count = 0;
     for (;;) {
         log_printf("main task: %d", count++);
+        sem_notify(&sem);
         // sys_sched_yield();
         sys_sleep(1000);
     }
