@@ -19,6 +19,10 @@
         "os_cfg.h": "c",
         "stdarg.h": "c",
         "list.h": "c",
-        "sem.h": "c"
+        "sem.h": "c",
+        "mutex.h": "c"
     },
+    "files.exclude": {
+    "**/source_tmp/": true
+}
 }
