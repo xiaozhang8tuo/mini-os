@@ -10,12 +10,13 @@
 #include "core/task.h"
 #include "tools/list.h"
 #include "ipc/sem.h"
+#include "core/memory.h"
 
 void kernel_init(boot_info_t* boot_info) {
     // ASSERT(boot_info->ram_region_count != 0);
     // ASSERT(4<2);
-    
     cpu_init();
+    memory_init(boot_info);
     log_init();
     irq_init();
     timer_init();

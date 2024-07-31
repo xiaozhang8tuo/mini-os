@@ -20,7 +20,8 @@
         "stdarg.h": "c",
         "list.h": "c",
         "sem.h": "c",
-        "mutex.h": "c"
+        "mutex.h": "c",
+        "memory.h": "c"
     },
     "files.exclude": {
     "**/source_tmp/": true
