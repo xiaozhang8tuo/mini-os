@@ -87,7 +87,7 @@ pte_t * find_pte (pde_t * page_dir, uint32_t vaddr, int alloc) {
         }
 
         // 设置为用户可读写，将被pte中设置所覆盖
-        pde->v = pg_paddr | PTE_P;
+        pde->v = pg_paddr | PTE_P | PTE_W | PTE_U;
 
         // 清空页表，防止出现异常
         // 这里虚拟地址和物理地址一一映射，所以直接写入
@@ -128,9 +128,11 @@ void create_kernel_table(void) {
     extern uint8_t kernel_base[];
 
     static memory_map_t kernel_map[] = {
-        {kernel_base, s_text, kernel_base, 0},
+        {kernel_base, s_text, kernel_base, PTE_W},
         {s_text, e_text, s_text, 0},
-        {s_data, (void*)MEM_EBDA_START, s_data, 0},
+        {s_data, (void*)MEM_EBDA_START, s_data, PTE_W},
+        // 扩展存储空间一一映射，方便直接操作 这里扩展的空间，虚拟地址和物理地址一致
+        {(void *)MEM_EXT_START, (void *)MEM_EXT_END, (void *)MEM_EXT_START, PTE_W},
     };
 
     for (int i = 0; i < sizeof(kernel_map) / sizeof(memory_map_t); i++) {
@@ -145,6 +147,23 @@ void create_kernel_table(void) {
         // 建立映射关系
         memory_create_map(kernel_page_dir, vstart, (uint32_t)map->pstart, page_count, map->perm);
     }
+}
+
+uint32_t memory_create_uvm(void) {
+    pde_t * page_dir = (pde_t* )addr_alloc_page(&paddr_alloc, 1); // 用户页目录表
+    if (page_dir == 0) {
+        return 0;
+    }
+
+    kernel_memset((void *)page_dir, 0, MEM_PAGE_SIZE);
+    // 复制整个内核空间的页目录项，以便与其它进程共享内核空间
+    // 用户空间的内存映射暂不处理，等加载程序时创建
+    uint32_t user_pde_start = pde_index(MEMORY_TASK_BASE);
+    for (int i = 0; i < user_pde_start; i++) {
+        page_dir[i].v = kernel_page_dir[i].v;
+    }
+
+    return (uint32_t)page_dir;
 }
 
 void memory_init(boot_info_t * boot_info) {
