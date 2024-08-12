@@ -210,3 +210,39 @@ void memory_init(boot_info_t * boot_info) {
 //         addr += 8192;
 //     }
 // }
+
+uint32_t memory_alloc_for_page_dir (uint32_t page_dir, uint32_t vaddr, uint32_t size, int perm) {
+    uint32_t curr_vaddr = vaddr;
+    int page_count = up2(size, MEM_PAGE_SIZE) / MEM_PAGE_SIZE;
+    vaddr = down2(vaddr, MEM_PAGE_SIZE);
+
+    // 逐页分配内存，然后建立映射关系
+    for (int i = 0; i < page_count; i++) {
+        // 分配需要的内存
+        uint32_t paddr = addr_alloc_page(&paddr_alloc, 1);
+        if (paddr == 0) {
+            log_printf("mem alloc failed. no memory");
+            return 0;
+        }
+
+        // 建立分配的内存与指定地址的关联
+        int err = memory_create_map((pde_t *)page_dir, curr_vaddr, paddr, 1, perm);
+        if (err < 0) {
+            log_printf("create memory map failed. err = %d", err);
+            addr_free_page(&paddr_alloc, vaddr, i + 1);
+            return 0;
+        }
+
+        curr_vaddr += MEM_PAGE_SIZE;
+    }
+
+    return 0;
+}
+
+
+/**
+ * @brief 为指定的虚拟地址空间分配多页内存
+ */
+int memory_alloc_page_for (uint32_t vaddr, uint32_t size, int perm) {
+    return memory_alloc_for_page_dir(task_current()->tss.cr3, vaddr, size, perm);
+}

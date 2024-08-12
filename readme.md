@@ -548,13 +548,138 @@ SECTIONS
 
 映射自己的线性地址和实际物理地址。不同进程相互隔离。不同进程共享操作系统代码。
 
+每个进程都有自己的页目录表和页表，所以
+
+**不同进程中线性地址可能实际上对应着相同的物理内存(共享)，或者不同的物理内存(隔离)**
+
 ![image-20240812121235934](.assets/image-20240812121235934.png)
 
 ## 21 隔离操作系统与进程 ##
 
 因为没有文件系统，所以进程代码和操作系统放在一起。现在进行 123
 
+物理内存放一起，load后运行时分开放
+
 ![image-20240812134302935](.assets/image-20240812134302935.png)
+
+
+
+### 21.1 单独指定elf中某些段的运行地址和加载地址 ###
+
+加载地址和运行地址是不一样的。
+
+加载地址是相对于静态存储的概念
+
+运行地址是相对于动态运行的概念
+
+![image-20240812155456042](.assets/image-20240812155456042.png)
+
+修改前
+
+```assembly
+/* 参考文档： https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_chapter/ld_3.html */
+SECTIONS
+{
+	PROVIDE(kernel_base = 0x0);
+    . = 0x10000;
+
+	PROVIDE(s_text = .);
+	.text : {
+		*(.text)
+	} 
+
+	.rodata : {
+		*(.rodata)
+	}
+	PROVIDE(e_text = .);
+
+	. = ALIGN(4096);
+	PROVIDE(s_data = .);
+	.data : {
+		*(.data)
+	}
+
+	.bss : {
+		*(.bss)
+	}
+	PROVIDE(mem_free_start = .);
+}
+
+# 生成的 elf文件
+Program Headers:
+  Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
+  LOAD           0x001000 0x00010000 0x00010000 0x03210 0x03210 R E 0x1000
+  LOAD           0x005000 0x00014000 0x00014000 0x00044 0x06de0 RW  0x1000
+  GNU_STACK      0x000000 0x00000000 0x00000000 0x00000 0x00000 RWE 0x10
+
+ Section to Segment mapping:
+  Segment Sections...
+   00     .text .rodata 
+   01     .data .bss 
+   02     
+```
+
+修改后
+
+```assembly
+/* 参考文档： https://ftp.gnu.org/old-gnu/Manuals/ld-2.9.1/html_chapter/ld_3.html */
+SECTIONS
+{
+	PROVIDE(kernel_base = 0x0);
+    . = 0x10000;
+
+	PROVIDE(s_text = .);
+	.text : {
+		*(EXCLUDE_FILE(*first_task*) .text)
+	} 
+
+	.rodata : {
+		*(EXCLUDE_FILE(*first_task*) .rodata)
+	}
+	PROVIDE(e_text = .);
+
+	. = ALIGN(4096);
+	PROVIDE(s_data = .);
+	.data : {
+		*(EXCLUDE_FILE(*first_task*) .data)
+	}
+
+	.bss : {
+		*(EXCLUDE_FILE(*first_task*) .bss)
+	}
+	e_data = .;
+
+	/* 初始进程的配置：接紧着在低端1MB内存开始存储，但是运行时搬运到0x80000000处 */
+	. = 0x80000000;
+	.first_task : AT(e_data) {
+		*first_task_entry*(.text .data. rodata .data)
+		*first_task*(.text .data. rodata .data)
+	}
+	e_first_task = LOADADDR(.first_task) + SIZEOF(.first_task);
+
+	PROVIDE(mem_free_start = e_first_task);
+}
+
+
+
+Program Headers:
+  Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
+  LOAD           0x001000 0x00010000 0x00010000 0x031d7 0x031d7 R E 0x1000
+  LOAD           0x005000 0x00014000 0x00014000 0x00044 0x06de0 RW  0x1000
+  LOAD           0x006000 0x80000000 0x0001ade0 0x0003c 0x0003c RWE 0x1000
+  GNU_STACK      0x000000 0x00000000 0x00000000 0x00000 0x00000 RWE 0x10
+
+ Section to Segment mapping:
+  Segment Sections...
+   00     .text .rodata 
+   01     .data .bss 
+   02     .first_task 
+   03   
+```
+
+修改之后，dump 0x80000000处的反汇编和first_task_entry一致
+
+![image-20240812170401394](.assets/image-20240812170401394.png)
 
 # OS #
 
