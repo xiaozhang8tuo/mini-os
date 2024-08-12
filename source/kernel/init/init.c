@@ -24,19 +24,19 @@ void kernel_init(boot_info_t* boot_info) {
     task_manager_init();
 }
 
-static task_t init_task;
-static uint32_t init_task_stack[1024];// init_task_entry 的栈
-static sem_t sem;
+// static task_t init_task;
+// static uint32_t init_task_stack[1024];// init_task_entry 的栈
+// static sem_t sem;
 
-void init_task_entry() {
-    int count = 0;
-    for (;;) {
-        // sem_wait(&sem);
-        log_printf("init task: %d", count++);
-        // sys_sleep(1000);
-        // sys_sched_yield();
-    }
-}
+// void init_task_entry() {
+//     int count = 0;
+//     for (;;) {
+//         // sem_wait(&sem);
+//         log_printf("init task: %d", count++);
+//         // sys_sleep(1000);
+//         // sys_sched_yield();
+//     }
+// }
 
 void list_test(void) {
     list_t list;
@@ -96,6 +96,17 @@ void list_test(void) {
     
 }
 
+void move_to_first_task() {
+    task_t * curr = task_current();
+    ASSERT(curr != 0);
+
+    tss_t * tss = &(curr->tss);
+    __asm__ __volatile__ (
+        "jmp *%[ip]"::[ip]"r"(tss->eip)
+    );
+}
+
+
 void init_main(void) {
     // list_test();
 
@@ -105,17 +116,20 @@ void init_main(void) {
     // log_printf("%d %d %x %c", -123, 123456, 0x12345, 'a');
     // int a = 3/0;
 
-    task_init(&init_task, "init task", (uint32_t)init_task_entry, (uint32_t)&init_task_stack[1024]);//这里取底部是因为，恢复现场时，栈需要pop的时候是从底往上的
-    task_first_init();
-    sem_init(&sem, 0);
-    irq_enable_global(); // 设置了8259之后还要这样开启全局中断
+    // task_init(&init_task, "init task", (uint32_t)init_task_entry, (uint32_t)&init_task_stack[1024]);//这里取底部是因为，恢复现场时，栈需要pop的时候是从底往上的
+    // task_first_init();
+    // sem_init(&sem, 0);
+    // irq_enable_global(); // 设置了8259之后还要这样开启全局中断
 
-    int count = 0;
-    for (;;) {
-        log_printf("main task: %d", count++);
-        // sem_notify(&sem);
-        // sys_sleep(1000);
-        // sys_sched_yield();
-    }
+    // int count = 0;
+    // for (;;) {
+    //     log_printf("main task: %d", count++);
+    //     // sem_notify(&sem);
+    //     // sys_sleep(1000);
+    //     // sys_sched_yield();
+    // }
+
+    task_first_init();
+    move_to_first_task();
 
 }
