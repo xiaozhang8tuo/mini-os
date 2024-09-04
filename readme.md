@@ -681,6 +681,18 @@ Program Headers:
 
 ![image-20240812170401394](.assets/image-20240812170401394.png)
 
+## 22 特权级 ##
+
+数据段访问相关的3种与权限相关的配置位：段描述符DPL(Descriptor privilege level(DPL))、选择子RPL(Requested privilege level(RPL))、段寄存器CS中的CPL(Current privilege level)。权限错误将产生段保护异常。
+
+访问数据段(DS,ES,FS,GS)时，仅当DPL>=Max(CPL,RPL)时才能访问。即本身的特权级要够大，且不能以过低的特权级请求去访问。当访问SS时，要求CPL=DPL=RPL。
+
+![image-20240827001856297](.assets/image-20240827001856297.png)
+
+
+
+![image-20240827002459985](.assets/image-20240827002459985.png)
+
 # OS #
 
 ![image-20230813211151879](.assets/image-20230813211151879.png)
