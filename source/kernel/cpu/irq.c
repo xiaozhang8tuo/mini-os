@@ -5,26 +5,7 @@
 #include "tools/log.h"
 #define IDT_TABLE_NR 128
 
-void exception_handler_unknow(void);
-void exception_handler_division(void);
-void exception_handler_Debug (void);
-void exception_handler_NMI (void);
-void exception_handler_breakpoint (void);
-void exception_handler_overflow (void);
-void exception_handler_bound_range (void);
-void exception_handler_invalid_opcode (void);
-void exception_handler_device_unavailable (void);
-void exception_handler_double_fault (void);
-void exception_handler_invalid_tss (void);
-void exception_handler_segment_not_present (void);
-void exception_handler_stack_segment_fault (void);
-void exception_handler_general_protection (void);
-void exception_handler_page_fault (void);
-void exception_handler_fpu_error (void);
-void exception_handler_alignment_check (void);
-void exception_handler_machine_check (void);
-void exception_handler_simd_exception (void);
-void exception_handler_virtual_exception (void);
+
 
 void dump_core_regs(exception_frame_t* frame) {
     log_printf("IRQ: %d, error_code: %d", frame->num, frame->error_code);
@@ -55,12 +36,12 @@ static void do_default_handler (exception_frame_t* frame, const char* message) {
     }
 }
 
-void do_handler_unknow (exception_frame_t* frame) {
+void do_handler_unknown (exception_frame_t* frame) {
     do_default_handler(frame, "unknow exception");
 }
 
 
-void do_handler_division (exception_frame_t* frame) {
+void do_handler_divider (exception_frame_t* frame) {
     do_default_handler(frame, "division exception");
 }
 
@@ -128,7 +109,7 @@ void do_handler_machine_check(exception_frame_t * frame) {
 	do_default_handler(frame, "Machine Check.");
 }
 
-void do_handler_simd_exception(exception_frame_t * frame) {
+void do_handler_smd_exception(exception_frame_t * frame) {
 	do_default_handler(frame, "SIMD Floating Point Exception.");
 }
 
@@ -167,12 +148,13 @@ static void init_pic(void) {
 
 void irq_init(void) {
     for (int i=0; i<IDT_TABLE_NR; i++) {
-        gate_desc_set(idt_table+i, KERNEL_SELECTOR_CS, (uint32_t)exception_handler_unknow, 
+        gate_desc_set(idt_table+i, KERNEL_SELECTOR_CS, (uint32_t)exception_handler_unknown, 
         GATE_P_PRESENT | GATE_DPL0 | GATE_TYPE_IDT);
     }
 
-    irq_install(IRQ0_DE, (irq_handler_t)exception_handler_division);
-    irq_install(IRQ1_DB, exception_handler_Debug);
+	// 设置异常处理接口
+    irq_install(IRQ0_DE, exception_handler_divider);
+	irq_install(IRQ1_DB, exception_handler_Debug);
 	irq_install(IRQ2_NMI, exception_handler_NMI);
 	irq_install(IRQ3_BP, exception_handler_breakpoint);
 	irq_install(IRQ4_OF, exception_handler_overflow);
@@ -188,7 +170,7 @@ void irq_init(void) {
 	irq_install(IRQ16_MF, exception_handler_fpu_error);
 	irq_install(IRQ17_AC, exception_handler_alignment_check);
 	irq_install(IRQ18_MC, exception_handler_machine_check);
-	irq_install(IRQ19_XM, exception_handler_simd_exception);
+	irq_install(IRQ19_XM, exception_handler_smd_exception);
 	irq_install(IRQ20_VE, exception_handler_virtual_exception);
 
     lidt((uint32_t)idt_table, sizeof(idt_table));

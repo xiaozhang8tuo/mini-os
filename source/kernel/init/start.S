@@ -73,8 +73,8 @@ exception_handler_\name:
     iret
 .endm
 
-exception_handler unknow, -1, 0
-exception_handler division, 0, 0
+exception_handler unknown, -1, 0
+exception_handler divider, 0, 0
 exception_handler Debug, 1, 0
 exception_handler NMI, 2, 0
 exception_handler breakpoint, 3, 0
@@ -91,7 +91,7 @@ exception_handler page_fault, 14, 1
 exception_handler fpu_error, 16, 0
 exception_handler alignment_check, 17, 1
 exception_handler machine_check, 18, 0
-exception_handler simd_exception, 19, 0
+exception_handler smd_exception, 19, 0
 exception_handler virtual_exception, 20, 0
 
 exception_handler timer, 0x20, 0

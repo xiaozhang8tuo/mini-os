@@ -25,6 +25,27 @@
 
 #define IRQ0_TIMER          0x20
 
+void exception_handler_unknown(void);
+void exception_handler_divider(void);
+void exception_handler_Debug (void);
+void exception_handler_NMI (void);
+void exception_handler_breakpoint (void);
+void exception_handler_overflow (void);
+void exception_handler_bound_range (void);
+void exception_handler_invalid_opcode (void);
+void exception_handler_device_unavailable (void);
+void exception_handler_double_fault (void);
+void exception_handler_invalid_tss (void);
+void exception_handler_segment_not_present (void);
+void exception_handler_stack_segment_fault (void);
+void exception_handler_general_protection (void);
+void exception_handler_page_fault (void);
+void exception_handler_fpu_error (void);
+void exception_handler_alignment_check (void);
+void exception_handler_machine_check (void);
+void exception_handler_smd_exception (void);
+void exception_handler_virtual_exception (void);
+
 // PIC控制器相关的寄存器及位配置
 #define PIC0_ICW1			0x20
 #define PIC0_ICW2			0x21

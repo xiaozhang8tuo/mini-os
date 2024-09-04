@@ -230,7 +230,7 @@ uint32_t memory_alloc_for_page_dir (uint32_t page_dir, uint32_t vaddr, uint32_t 
         if (err < 0) {
             log_printf("create memory map failed. err = %d", err);
             addr_free_page(&paddr_alloc, vaddr, i + 1);
-            return 0;
+            return -1;
         }
 
         curr_vaddr += MEM_PAGE_SIZE;

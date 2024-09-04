@@ -7,7 +7,7 @@ __asm__(".code16gcc");
 
 #include "boot.h"
 
-#define LOADER_START_ADDR 0X8000
+#define	LOADER_START_ADDR	0x8000		// loader加载的地址
 
 /**
  * Boot的C入口函数
