@@ -10,7 +10,7 @@
 static task_manager_t task_manager;
 static uint32_t idle_task_stack[IDLE_TASK_STACK_SIZE];
 // 初始化tss结构,设置入口地址,分配选择子等等
-static int tss_init(task_t* task, uint32_t entry, uint32_t esp) {
+static int tss_init(task_t* task, int flag, uint32_t entry, uint32_t esp) {
     int tss_sel = gdt_alloc_desc();
     if (tss_sel < 0) {
         log_printf("alloc tss failed.\r\n");
@@ -24,9 +24,14 @@ static int tss_init(task_t* task, uint32_t entry, uint32_t esp) {
     kernel_memset(&(task->tss), 0, sizeof(tss_t));
 
     int code_sel, data_sel;
-    // 注意加了RP3,不然将产生段保护错误
-    code_sel = task_manager.app_code_sel | SEG_CPL3;
-    data_sel = task_manager.app_data_sel | SEG_CPL3;
+    if (flag & TASK_FLAG_SYSTEM) {
+        code_sel = KERNEL_SELECTOR_CS;
+        data_sel = KERNEL_SELECTOR_DS;
+    } else {
+        // 注意加了RP3,不然将产生段保护错误
+        code_sel = task_manager.app_code_sel | SEG_CPL3;
+        data_sel = task_manager.app_data_sel | SEG_CPL3;
+    }
 
     task->tss.eip = entry;
     task->tss.esp = task->tss.esp0 = esp;
@@ -50,10 +55,10 @@ static int tss_init(task_t* task, uint32_t entry, uint32_t esp) {
     return 0;
 }
 
-int task_init(task_t* task, const char* name, uint32_t entry, uint32_t esp) {
+int task_init(task_t* task, const char* name, int flag, uint32_t entry, uint32_t esp) {
     ASSERT(task != (task_t *)0);
 
-    tss_init(task, entry, esp);
+    tss_init(task, flag, entry, esp);
     // uint32_t* pesp = (uint32_t *)esp;
     // if (pesp) {
     //     *(--pesp) = entry; //这里填写任务的返回地址，恢复现场的时候ret用
@@ -107,7 +112,8 @@ void task_manager_init(void) {
     list_init(&task_manager.sleep_list);
     task_manager.curr_task = (task_t *)0;
 
-    task_init(&task_manager.idle_task, "idle_task", (uint32_t)idle_task_entry, (uint32_t)(idle_task_stack+IDLE_TASK_STACK_SIZE));
+    task_init(&task_manager.idle_task, "idle_task", TASK_FLAG_SYSTEM, 
+                (uint32_t)idle_task_entry, (uint32_t)(idle_task_stack+IDLE_TASK_STACK_SIZE));
 }
 
 void task_first_init(void) {
@@ -121,7 +127,7 @@ void task_first_init(void) {
 
     uint32_t first_start = (uint32_t)first_task_entry;
 
-    task_init(&task_manager.first_task, "first task", first_task_entry, 0);
+    task_init(&task_manager.first_task, "first task", 0, first_task_entry, 0);
     write_tr(task_manager.first_task.tss_sel);
     task_manager.curr_task = &task_manager.first_task;
 
