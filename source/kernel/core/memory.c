@@ -7,6 +7,13 @@ static addr_alloc_t paddr_alloc;
 
 static pde_t kernel_page_dir[PDE_CNT] __attribute__((aligned(MEM_PAGE_SIZE))); // 内核页目录表
 
+/**
+ * @brief 获取当前页表地址
+ */
+static pde_t * current_page_dir (void) {
+    return (pde_t *)task_current()->tss.cr3;
+}
+
 static void addr_alloc_init (addr_alloc_t * alloc, uint8_t * bits,
                     uint32_t start, uint32_t size, uint32_t page_size) {
     mutex_init(&alloc->mutex);
@@ -245,4 +252,34 @@ uint32_t memory_alloc_for_page_dir (uint32_t page_dir, uint32_t vaddr, uint32_t 
  */
 int memory_alloc_page_for (uint32_t vaddr, uint32_t size, int perm) {
     return memory_alloc_for_page_dir(task_current()->tss.cr3, vaddr, size, perm);
+}
+
+/**
+ * @brief 分配一页内存
+ * 主要用于内核空间内存的分配，不用于进程内存空间
+ */
+uint32_t memory_alloc_page (void) {
+    // 内核空间虚拟地址与物理地址相同
+    // 因为 {(void *)MEM_EXT_START, (void *)MEM_EXT_END, (void *)MEM_EXT_START, PTE_W},
+    return addr_alloc_page(&paddr_alloc, 1);
+}
+
+/**
+ * @brief 释放一页内存
+ */
+void memory_free_page (uint32_t addr) {
+    if (addr < MEMORY_TASK_BASE) {
+        // 内核空间，直接释放
+        addr_free_page(&paddr_alloc, addr, 1);
+    } else {
+        // 进程空间，还要释放页表
+        pte_t * pte = find_pte(current_page_dir(), addr, 0);
+        ASSERT((pte != (pte_t *)0) && pte->present);
+
+        // 释放内存页
+        addr_free_page(&paddr_alloc, pte_paddr(pte), 1);
+
+        // 释放页表
+        pte->v = 0;
+    }
 }

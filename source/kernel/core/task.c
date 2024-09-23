@@ -23,6 +23,12 @@ static int tss_init(task_t* task, int flag, uint32_t entry, uint32_t esp) {
 
     kernel_memset(&(task->tss), 0, sizeof(tss_t));
 
+    // 分配内核栈，得到的是物理地址
+    uint32_t kernel_stack = memory_alloc_page();
+    if (kernel_stack == 0) {
+        goto tss_init_failed;
+    }
+
     int code_sel, data_sel;
     if (flag & TASK_FLAG_SYSTEM) {
         code_sel = KERNEL_SELECTOR_CS;
@@ -34,7 +40,8 @@ static int tss_init(task_t* task, int flag, uint32_t entry, uint32_t esp) {
     }
 
     task->tss.eip = entry;
-    task->tss.esp = task->tss.esp0 = esp;
+    task->tss.esp = esp ? esp : kernel_stack + MEM_PAGE_SIZE;  // 未指定栈则用内核栈，即运行在特权级0的进程
+    task->tss.esp0 = kernel_stack + MEM_PAGE_SIZE;
     task->tss.ss0 = KERNEL_SELECTOR_DS;
     task->tss.eflags = EFLAGS_DEFAULT| EFLAGS_IF;
     task->tss.es = task->tss.ss = task->tss.ds = task->tss.fs 
@@ -45,14 +52,20 @@ static int tss_init(task_t* task, int flag, uint32_t entry, uint32_t esp) {
     // 页表初始化
     uint32_t page_dir = memory_create_uvm();
     if (page_dir == 0) {
-        gdt_free_sel(tss_sel);
-        return -1;
+        goto tss_init_failed;
     }
     task->tss.cr3 = page_dir;
 
     task->tss_sel = tss_sel;
 
     return 0;
+tss_init_failed:
+    gdt_free_sel(tss_sel);
+
+    if (kernel_stack) {
+        memory_free_page(kernel_stack);
+    }
+    return -1;
 }
 
 int task_init(task_t* task, const char* name, int flag, uint32_t entry, uint32_t esp) {
@@ -113,7 +126,7 @@ void task_manager_init(void) {
     task_manager.curr_task = (task_t *)0;
 
     task_init(&task_manager.idle_task, "idle_task", TASK_FLAG_SYSTEM, 
-                (uint32_t)idle_task_entry, (uint32_t)(idle_task_stack+IDLE_TASK_STACK_SIZE));
+                (uint32_t)idle_task_entry, 0);     // 运行于内核模式，无需指定特权级3的栈
 }
 
 void task_first_init(void) {
@@ -127,14 +140,14 @@ void task_first_init(void) {
 
     uint32_t first_start = (uint32_t)first_task_entry;
 
-    task_init(&task_manager.first_task, "first task", 0, first_task_entry, 0);
+    task_init(&task_manager.first_task, "first task", 0, first_task_entry, first_start + alloc_size);
     write_tr(task_manager.first_task.tss_sel);
     task_manager.curr_task = &task_manager.first_task;
 
     mmu_set_page_dir(task_manager.first_task.tss.cr3);
 
-    // 分配一页内存供代码存放使用，然后将代码复制过去
-    memory_alloc_page_for(first_start,  alloc_size, PTE_P | PTE_W);
+    // 分配一页内存供代码存放使用，然后将代码复制过去, PTE_U :用户态特权级3可以读
+    memory_alloc_page_for(first_start,  alloc_size, PTE_P | PTE_W | PTE_U);
     kernel_memcpy((void *)first_start, (void *)s_first_task, copy_size);
 }
 
