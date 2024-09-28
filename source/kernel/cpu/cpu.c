@@ -3,6 +3,7 @@
 #include "comm/cpu_instr.h"
 #include "cpu/irq.h"
 #include "ipc/mutex.h"
+#include "core/syscall.h"
 
 static segment_desc_t gdt_table[GDT_TABLE_SIZE];
 static mutex_t mutex;
@@ -63,6 +64,13 @@ void init_gdt (void) {
         SEG_P_PRESENT | SEG_DPL0 | SEG_S_NORMAL | SEG_TYPE_CODE | SEG_TYPE_RW | SEG_D);
     segment_desc_set(KERNEL_SELECTOR_DS, 0, 0xFFFFFFFF, 
         SEG_P_PRESENT | SEG_DPL0 | SEG_S_NORMAL | SEG_TYPE_DATA | SEG_TYPE_RW | SEG_D);
+
+    
+    // 调用门
+    gate_desc_set((gate_desc_t *)(gdt_table + (SELECTOR_SYSCALL >> 3)),
+            KERNEL_SELECTOR_CS,
+            (uint32_t)exception_handler_syscall,
+            GATE_P_PRESENT | GATE_DPL3 | GATE_TYPE_SYSCALL | SYSCALL_PARAM_COUNT);
 
     lgdt((uint32_t)gdt_table, sizeof(gdt_table));
     // 调用 lgdt 指令是加载全局描述符表（GDT）到CPU的GDTR寄存器中。
