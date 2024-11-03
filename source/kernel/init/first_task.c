@@ -3,9 +3,22 @@
 #include "applib/lib_syscall.h"
 
 int first_task_main (void) {
-    // 可将task_manager添加到观察窗口中，找到curr_task.pid比较
-    int pid = getpid();
+    int count = 3;
 
+    int pid = getpid();
+    print_msg("first task id=%d", pid);
+    
+    pid = fork();
+    if (pid < 0) {
+        print_msg("create child proc failed.", 0);
+    } else if (pid == 0) {
+        print_msg("child: %d", count);
+    } else {
+        print_msg("child task id=%d", pid);
+        print_msg("parent: %d", count);
+    }
+
+    pid = getpid();
     for (;;) {
         print_msg("task id=%d", pid);
         msleep(1000);

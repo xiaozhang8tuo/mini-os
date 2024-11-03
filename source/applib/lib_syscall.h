@@ -59,4 +59,10 @@ static inline int print_msg(char * fmt, int arg) {
     return sys_call(&args);
 }
 
+static inline int fork() {
+    syscall_args_t args;
+    args.id = SYS_fork;
+    return sys_call(&args);
+}
+
 #endif

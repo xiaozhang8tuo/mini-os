@@ -6,9 +6,14 @@
 #include "tools/log.h"
 #include "cpu/mmu.h"
 #include "core/memory.h"
+#include "core/syscall.h"
 
 static task_manager_t task_manager;
 static uint32_t idle_task_stack[IDLE_TASK_STACK_SIZE];
+static task_t task_table[TASK_NR];      // 用户进程表
+static mutex_t task_table_mutex;        // 进程表互斥访问锁
+
+
 // 初始化tss结构,设置入口地址,分配选择子等等
 static int tss_init(task_t* task, int flag, uint32_t entry, uint32_t esp) {
     int tss_sel = gdt_alloc_desc();
@@ -86,6 +91,7 @@ int task_init(task_t* task, const char* name, int flag, uint32_t entry, uint32_t
     task->time_ticks = TASK_TIME_SLICE_DEFAULT;
     task->sleep_ticks = 0;
     task->slice_ticks = task->time_ticks;
+    task->parent = (task_t *)0;
     list_node_init(&task->all_node);
     list_node_init(&task->run_node);
     list_node_init(&task->wait_node);
@@ -95,6 +101,30 @@ int task_init(task_t* task, const char* name, int flag, uint32_t entry, uint32_t
     list_insert_last(&task_manager.task_list, &task->all_node);
     irq_leave_protection(state);
     return 0;
+}
+
+
+/**
+ * @brief 任务任务初始时分配的各项资源
+ */
+void task_uninit (task_t * task) {
+    // 选择子
+    if (task->tss_sel) {
+        gdt_free_sel(task->tss_sel);
+    }
+
+    // 栈空间
+    if (task->tss.esp0) {
+        memory_free_page(task->tss.esp0 - MEM_PAGE_SIZE);
+    }
+
+    // 页表
+    if (task->tss.cr3) {
+        // 没有分配空间，暂时不写
+        //memory_destroy_uvm(task->tss.cr3);
+    }
+
+    kernel_memset(task, 0, sizeof(task_t));
 }
 
 void simple_switch(uint32_t** from, uint32_t* to);
@@ -111,6 +141,9 @@ static void idle_task_entry (void) {
 }
 
 void task_manager_init(void) {
+    kernel_memset(task_table, 0, sizeof(task_table));
+    mutex_init(&task_table_mutex);
+
     int sel = gdt_alloc_desc();
     segment_desc_set(sel, 0x00000000, 0xFFFFFFFF,
         SEG_P_PRESENT | SEG_DPL3 | SEG_S_NORMAL | SEG_TYPE_DATA | SEG_TYPE_RW | SEG_D);
@@ -266,4 +299,86 @@ void sys_sleep(uint32_t ms) {
 int sys_getpid (void) {
     task_t * curr_task = task_current();
     return curr_task->pid;
+}
+
+/**
+ * 分配一个任务结构
+ */
+static task_t * alloc_task (void) {
+    task_t * task = (task_t *)0;
+
+    mutex_lock(&task_table_mutex);
+    for (int i = 0; i < TASK_NR; i++) {
+        task_t * curr = task_table + i;
+        if (curr->name[0] == 0) {
+            task = curr;
+            break;
+        }
+    }
+    mutex_unlock(&task_table_mutex);
+
+    return task;
+}
+
+/**
+ * 释放任务结构
+ */
+static void free_task (task_t * task) {
+    mutex_lock(&task_table_mutex);
+    task->name[0] = 0;
+    mutex_unlock(&task_table_mutex);
+}
+
+/**
+ * 创建进程的副本
+ */
+int sys_fork (void) {
+    task_t * parent_task = task_current();
+
+    // 分配任务结构
+    task_t * child_task = alloc_task();
+    if (child_task == (task_t *)0) {
+        goto fork_failed;
+    }
+    syscall_frame_t * frame = (syscall_frame_t *)(parent_task->tss.esp0 - sizeof(syscall_frame_t));
+
+    // 对子进程进行初始化, 并对必要的字段进行调整
+    // 其中esp要减去系统调用的总参数字节大小，因为其是通过正常的ret返回, 而没有走系统调用处理的ret(参数个数返回)
+    // 这里要注意子进程的esp不能直接设置成父进程的esp,要把传入的args这块pop出来. 子进程执行的位置,是父进程执行完毕lcall之后的位置
+    int err = task_init(child_task,  parent_task->name, 0, frame->eip,
+                        frame->esp + sizeof(uint32_t)*SYSCALL_PARAM_COUNT);
+    if (err < 0) {
+        goto fork_failed;
+    }
+
+    // 从父进程的栈中取部分状态，然后写入tss。
+    // 注意检查esp, eip等是否在用户空间范围内，不然会造成page_fault
+    tss_t * tss = &child_task->tss;
+    tss->eax = 0;                       // 子进程返回0, 这就是为什么getpid返回值可以区分父子进程的原因
+    tss->ebx = frame->ebx;
+    tss->ecx = frame->ecx;
+    tss->edx = frame->edx;
+    tss->esi = frame->esi;
+    tss->edi = frame->edi;
+    tss->ebp = frame->ebp;
+
+    tss->cs = frame->cs;
+    tss->ds = frame->ds;
+    tss->es = frame->es;
+    tss->fs = frame->fs;
+    tss->gs = frame->gs;
+    tss->eflags = frame->eflags;
+
+    child_task->parent = parent_task;
+    // 复制父进程的内存空间到子进程，暂时使用相同的页表
+    child_task->tss.cr3 = parent_task->tss.cr3;
+
+    // 创建成功，返回子进程的pid
+    return child_task->pid;
+fork_failed:
+    if (child_task) {
+        task_uninit (child_task);
+        free_task(child_task);
+    }
+    return -1;
 }
