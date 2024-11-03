@@ -45,5 +45,10 @@ static inline int msleep (int ms) {
 	return sys_call(&args);
 }
 
+static inline int getpid() {
+    syscall_args_t args;
+    args.id = SYS_getpid;
+	return sys_call(&args);
+}
 
 #endif

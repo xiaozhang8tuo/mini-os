@@ -4,6 +4,7 @@
 #define SYSCALL_PARAM_COUNT     5       	// 系统调用最大支持的参数
 
 #define SYS_msleep              0
+#define SYS_getpid              1
 
 /**
  * 系统调用的栈信息

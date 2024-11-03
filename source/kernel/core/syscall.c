@@ -10,6 +10,7 @@ typedef int (*syscall_handler_t)(uint32_t arg0, uint32_t arg1, uint32_t arg2, ui
 // 系统调用表
 static const syscall_handler_t sys_table[] = {
 	[SYS_msleep] = (syscall_handler_t)sys_sleep,
+    [SYS_getpid] =(syscall_handler_t)sys_getpid,
 };
 
 
@@ -23,6 +24,7 @@ void do_handler_syscall (syscall_frame_t * frame) {
 		syscall_handler_t handler = sys_table[frame->func_id];
 		if (handler) {
 			int ret = handler(frame->arg0, frame->arg1, frame->arg2, frame->arg3);
+            frame->eax = ret;  // 设置系统调用的返回值，由eax传递   在 sys_call中，:"=a"(ret) ret从eax中取
             return;
 		}
 	}
@@ -30,4 +32,5 @@ void do_handler_syscall (syscall_frame_t * frame) {
 	// 不支持的系统调用，打印出错信息
 	task_t * task = task_current();
 	log_printf("task: %s, Unknown syscall: %d", task->name,  frame->func_id);
+    frame->eax = -1;  // 设置系统调用的返回值，由eax传递
 }

@@ -90,6 +90,7 @@ int task_init(task_t* task, const char* name, int flag, uint32_t entry, uint32_t
     list_node_init(&task->run_node);
     list_node_init(&task->wait_node);
     irq_state_t state = irq_enter_protection();
+    task->pid = (uint32_t)task;   // 使用地址，能唯一
     task_set_ready(task);
     list_insert_last(&task_manager.task_list, &task->all_node);
     irq_leave_protection(state);
@@ -257,4 +258,12 @@ void sys_sleep(uint32_t ms) {
     task_set_sleep(task_manager.curr_task, (ms+OS_TICKS_MS-1)/OS_TICKS_MS);// 向上取整
     task_dispatch();
     irq_leave_protection(state);
+}
+
+/**
+ * 返回任务的pid
+ */
+int sys_getpid (void) {
+    task_t * curr_task = task_current();
+    return curr_task->pid;
 }

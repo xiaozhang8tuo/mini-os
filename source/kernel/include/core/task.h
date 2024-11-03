@@ -23,6 +23,7 @@ typedef struct _task_t {
     int slice_ticks;
 
     char name[TASK_NAME_SIZE];
+    int pid;				// 进程的pid
     list_node_t run_node;
     list_node_t wait_node;
     list_node_t all_node;
@@ -62,5 +63,5 @@ void task_set_sleep(task_t* task, uint32_t ticks);
 void task_set_wakeup(task_t* task);
 void sys_sleep(uint32_t ms);
 void task_dispatch(void);
-
+int sys_getpid (void);
 #endif

@@ -123,7 +123,7 @@ simple_switch:
      .extern do_handler_syscall
 exception_handler_syscall:
     # 保存所有寄存器
-    pusha # push general-purpose registers Figure 3-4
+    pusha # push general-purpose registers Figure 3-4 pusha：将所有通用寄存器（GP寄存器）压栈保存。这包括%eax、%ecx、%edx、%ebx、%esp、%ebp、%esi和%edi。
     push %ds
     push %es
     push %fs
