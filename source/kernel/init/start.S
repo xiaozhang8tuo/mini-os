@@ -120,5 +120,36 @@ simple_switch:
     ret
 
      .global exception_handler_syscall
+     .extern do_handler_syscall
 exception_handler_syscall:
+    # 保存所有寄存器
+    pusha # push general-purpose registers Figure 3-4
+    push %ds
+    push %es
+    push %fs
+    push %gs
+    pushf
+
+	# 使用内核段寄存器，避免使用应用层的
+    # 将%eax寄存器中的值（内核数据段选择子）分别赋值给DS、ES、FS和GS段寄存器。这样做的目的是确保在处理系统调用时，CPU使用内核的段寄存器，
+    # 而不是用户空间的段寄存器。这是出于安全和一致性的考虑，因为在内核模式下，操作系统需要访问所有内存，并且需要确保段寄存器指向正确的内核段。
+	mov $(KERNEL_SELECTOR_DS), %eax
+	mov %eax, %ds
+	mov %eax, %es
+	mov %eax, %fs
+	mov %eax, %gs
+
+    mov %esp, %eax
+    push %eax
+    call do_handler_syscall
+    add $4, %esp
+
+    # 恢复保存的寄存器
+    popf
+    pop %gs
+    pop %fs
+    pop %es
+    pop %ds
+    popa
+
     retf $(5*4)

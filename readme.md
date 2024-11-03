@@ -705,9 +705,13 @@ Program Headers:
 
 
 
-系统调用时的特权级切换，retf (far return) 回到不同的代码段中，ss/esp特权级1  **retf $(4*5)**
+系统调用时的特权级切换，retf (far return) 回到不同的代码段中，ss/esp特权级1  **retf $(4*5)**，对应的是syscall_frame_t结构体。
 
 ![image-20241029001902085](.assets/image-20241029001902085.png)
+
+手动压栈一部分参数，为了后续的fork子进程。
+
+![image-20241103113019289](.assets/image-20241103113019289.png)
 
 # OS #
 
