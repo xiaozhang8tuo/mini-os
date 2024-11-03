@@ -22,7 +22,9 @@
         "sem.h": "c",
         "mutex.h": "c",
         "memory.h": "c",
-        "bitmap.h": "c"
+        "bitmap.h": "c",
+        "log.h": "c",
+        "syscall.h": "c"
     },
     "files.exclude": {
     "**/source_tmp/": true

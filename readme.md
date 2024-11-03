@@ -693,7 +693,7 @@ Program Headers:
 
 ![image-20240827002459985](.assets/image-20240827002459985.png)
 
-# 23 创建系统调用  #
+## 23 创建系统调用  ##
 
 调用们描述符
 
@@ -702,6 +702,12 @@ Program Headers:
 
 
 ![image-20240929000218148](.assets/image-20240929000218148.png)
+
+
+
+系统调用时的特权级切换，retf (far return) 回到不同的代码段中，ss/esp特权级1  **retf $(4*5)**
+
+![image-20241029001902085](.assets/image-20241029001902085.png)
 
 # OS #
 

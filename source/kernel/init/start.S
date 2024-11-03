@@ -121,4 +121,4 @@ simple_switch:
 
      .global exception_handler_syscall
 exception_handler_syscall:
-    ret
+    retf $(5*4)
