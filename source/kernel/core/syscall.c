@@ -7,10 +7,15 @@
 // 系统调用处理函数类型
 typedef int (*syscall_handler_t)(uint32_t arg0, uint32_t arg1, uint32_t arg2, uint32_t arg3);
 
+int sys_print_msg (char * fmt, int arg) {
+	log_printf(fmt, arg);
+}
+
 // 系统调用表
 static const syscall_handler_t sys_table[] = {
 	[SYS_msleep] = (syscall_handler_t)sys_sleep,
     [SYS_getpid] =(syscall_handler_t)sys_getpid,
+	[SYS_printmsg] = (syscall_handler_t)sys_print_msg,
 };
 
 

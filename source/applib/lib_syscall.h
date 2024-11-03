@@ -51,4 +51,12 @@ static inline int getpid() {
 	return sys_call(&args);
 }
 
+static inline int print_msg(char * fmt, int arg) {
+    syscall_args_t args;
+    args.id = SYS_printmsg;
+    args.arg0 = (int)fmt;
+    args.arg1 = arg;
+    return sys_call(&args);
+}
+
 #endif
