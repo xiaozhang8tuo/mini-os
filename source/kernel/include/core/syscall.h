@@ -6,6 +6,7 @@
 #define SYS_msleep              0
 #define SYS_getpid              1
 #define SYS_fork				2
+#define SYS_execve              3
 #define SYS_printmsg            100
 /**
  * 系统调用的栈信息

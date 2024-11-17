@@ -383,3 +383,7 @@ fork_failed:
     }
     return -1;
 }
+
+int sys_execve(char *name, char * const *argv, char * const *env) {
+    return -1;
+}

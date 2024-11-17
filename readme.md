@@ -770,6 +770,12 @@ Program Headers:
 
 ![image-20241103164621606](.assets/image-20241103164621606.png)
 
+## 25 exec ##
+
+`crt0.S`是C运行时启动代码（C Runtime Start），它的主要任务是初始化程序运行环境，并为C语言程序的执行做好准备。是负责调用main函数的代码。
+
+
+
 # OS #
 
 ![image-20230813211151879](.assets/image-20230813211151879.png)
