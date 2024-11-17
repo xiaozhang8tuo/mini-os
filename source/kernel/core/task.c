@@ -120,8 +120,7 @@ void task_uninit (task_t * task) {
 
     // 页表
     if (task->tss.cr3) {
-        // 没有分配空间，暂时不写
-        //memory_destroy_uvm(task->tss.cr3);
+        memory_destroy_uvm(task->tss.cr3);
     }
 
     kernel_memset(task, 0, sizeof(task_t));
@@ -370,8 +369,10 @@ int sys_fork (void) {
     tss->eflags = frame->eflags;
 
     child_task->parent = parent_task;
-    // 复制父进程的内存空间到子进程，暂时使用相同的页表
-    child_task->tss.cr3 = parent_task->tss.cr3;
+    // 复制父进程的内存空间到子进程
+    if ((child_task->tss.cr3 = memory_copy_uvm(parent_task->tss.cr3)) < 0) {
+        goto fork_failed;
+    }
 
     // 创建成功，返回子进程的pid
     return child_task->pid;

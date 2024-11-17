@@ -52,7 +52,12 @@ typedef union _pte_t {
     };
 }pte_t;
 
+/**
+ * @brief 重新加载整个页表
+ * @param vaddr 页表的虚拟地址
+ */
 static inline void mmu_set_page_dir(uint32_t paddr) {
+    // 将虚拟地址转换为物理地址
     write_cr3(paddr);
 }
 
@@ -83,5 +88,12 @@ static inline uint32_t pde_paddr (pde_t * pde) {
  */
 static inline uint32_t pte_paddr (pte_t * pte) {
     return pte->phy_page_addr << 12;
+}
+
+/**
+ * @brief 获取pte中的权限位
+ */
+static inline uint32_t get_pte_perm (pte_t * pte) {
+    return (pte->v & 0x3FF);
 }
 #endif

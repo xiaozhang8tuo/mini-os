@@ -34,4 +34,7 @@ uint32_t memory_create_uvm(void);
 
 int memory_alloc_page_for (uint32_t addr, uint32_t size, int perm);
 
+void memory_destroy_uvm (uint32_t page_dir);
+uint32_t memory_copy_uvm (uint32_t page_dir);
+
 #endif
