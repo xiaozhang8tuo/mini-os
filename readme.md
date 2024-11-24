@@ -780,6 +780,21 @@ Program Headers:
 
 ### 把elf中的内容加载到新的页表中 ###
 
+```cpp
+/**
+ * @brief 获取指定虚拟地址的物理地址
+ * 如果转换失败，返回0。
+ */
+uint32_t memory_get_paddr (uint32_t page_dir, uint32_t vaddr) {
+    pte_t * pte = find_pte((pde_t *)page_dir, vaddr, 0);
+    if (pte == (pte_t *)0) {
+        return 0;
+    }
+
+    return pte_paddr(pte) + (vaddr & (MEM_PAGE_SIZE - 1));
+}
+```
+
 假设我们使用的是一个简单的分页系统，其中：
 
 - 虚拟地址空间的大小是4GB（2^32字节）。
@@ -805,7 +820,15 @@ Program Headers:
 
 在实际的内存管理中，操作系统会使用这些索引来查找页目录项和页表项，然后根据这些项中的信息找到对应的物理页框地址。最后，将物理页框地址与页内偏移量相加，得到最终的物理地址。例如，如果页目录项和页表项指向的物理页框地址是0x00001000，那么最终的物理地址将是0x00001000 + 0x5678 = 0x00006678。
 
+在成功将shell.elf加载到内存中时，切换页表之后，gdb查看当前页表的反汇编和shell.elf一致
 
+```cpp
+-exec disassemble 0x81000000 
+```
+
+
+
+![image-20241124223430587](.assets/image-20241124223430587.png)
 
 
 
