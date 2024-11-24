@@ -384,6 +384,45 @@ fork_failed:
     return -1;
 }
 
+/**
+ * @brief 加载elf文件到内存中
+ */
+static uint32_t load_elf_file (task_t * task, const char * name, uint32_t page_dir) {
+    return 0;
+}
+
+
 int sys_execve(char *name, char * const *argv, char * const *env) {
+    task_t * task = task_current();
+
+    // 现在开始加载了，先准备应用页表，由于所有操作均在内核区中进行，所以可以直接先切换到新页表
+    uint32_t old_page_dir = task->tss.cr3;
+    uint32_t new_page_dir = memory_create_uvm();
+    if (!new_page_dir) {
+        goto exec_failed;
+    }
+
+    // 加载elf文件到内存中。要放在开启新页表之后，这样才能对相应的内存区域写
+    uint32_t entry = load_elf_file(task, name, new_page_dir);    // 暂时置用task->name表示
+    if (entry == 0) {
+        goto exec_failed;
+    }
+
+    // 切换到新的页表
+    task->tss.cr3 = new_page_dir;
+    mmu_set_page_dir(new_page_dir);   // 切换至新的页表。由于不用访问原栈及数据，所以并无问题
+
+    // 当从系统调用中返回时，将切换至新进程的入口地址运行，并且进程能够获取参数
+    // 注意，如果用户栈设置不当，可能导致返回后运行出现异常。可在gdb中使用nexti单步观察运行流程
+    return  0;
+
+exec_failed:    // 必要的资源释放
+    if (new_page_dir) {
+        // 有页表空间切换，切换至旧页表，销毁新页表
+        task->tss.cr3 = old_page_dir;
+        mmu_set_page_dir(old_page_dir);
+        memory_destroy_uvm(new_page_dir);
+    }
+
     return -1;
 }
