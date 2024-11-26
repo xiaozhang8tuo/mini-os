@@ -12,6 +12,9 @@
 #define MEMORY_TASK_BASE (0x80000000)        // 进程起始线性地址空间
 #define MEM_EXT_END (12*1024*1024 - 1)
 
+#define MEM_TASK_STACK_TOP          (0xE0000000)        // 初始栈的位置  
+#define MEM_TASK_STACK_SIZE         (MEM_PAGE_SIZE * 500)   // 初始500KB栈
+
 typedef struct _addr_alloc_t {
     mutex_t mutex;
     bitmap_t bitmap;

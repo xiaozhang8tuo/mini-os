@@ -140,9 +140,12 @@ exception_handler_syscall:
 	mov %eax, %gs
 
     mov %esp, %eax
-    push %eax
+    push %eax  # do_handler_syscall 需要的参数就是esp
     call do_handler_syscall
     add $4, %esp
+    # 将当前栈指针 %esp 保存到 %eax，然后将其压入栈中。保存栈指针是为了在系统调用处理后恢复栈的状态。
+    # 调用 do_handler_syscall 函数来处理实际的系统调用。do_handler_syscall 可能会使用栈中的数据来获取系统调用的参数或者处理其他操作。
+    # 调用完 do_handler_syscall 后，add $4, %esp 用来恢复栈指针，去除刚才压入的 %esp 值。
 
     # 恢复保存的寄存器
     popf

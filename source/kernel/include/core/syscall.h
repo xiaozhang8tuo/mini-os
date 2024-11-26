@@ -14,8 +14,8 @@
 typedef struct _syscall_frame_t {
 	int eflags;
 	int gs, fs, es, ds;
-	int edi, esi, ebp, dummy, ebx, edx, ecx, eax;
-	int eip, cs;
+	int edi, esi, ebp, dummy, ebx, edx, ecx, eax; // pusha 是一种方便的方式，可以一次性保存所有的通用寄存器，其压栈顺序是 eax->... edi
+	int eip, cs; // x86 架构的中断或异常处理过程中, %eip（指令指针寄存器）和 %cs（代码段寄存器）并不会被 pusha 指令压入栈中。它们是通过硬件自动保存和恢复的。
 	int func_id, arg0, arg1, arg2, arg3;
 	int esp, ss;
 }syscall_frame_t;

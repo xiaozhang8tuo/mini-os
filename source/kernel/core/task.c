@@ -531,6 +531,31 @@ int sys_execve(char *name, char * const *argv, char * const *env) {
         goto exec_failed;
     }
 
+    // 准备用户栈空间，预留环境环境及参数的空间
+    uint32_t stack_top = MEM_TASK_STACK_TOP;
+    int err = memory_alloc_for_page_dir(
+                            new_page_dir,
+                            MEM_TASK_STACK_TOP - MEM_TASK_STACK_SIZE, //栈是从高到底的，
+                            MEM_TASK_STACK_SIZE, 
+                            PTE_P | PTE_U | PTE_W);
+    if (err < 0) {
+        goto exec_failed;
+    }
+
+    // 加载完毕，为程序的执行做必要准备
+    // 注意，exec的作用是替换掉当前进程，所以只要改变当前进程的执行流即可
+    // 当该进程恢复运行时，像完全重新运行一样，所以用户栈要设置成初始模式
+    // 运行地址要设备成整个程序的入口地址
+    syscall_frame_t * frame = (syscall_frame_t *)(task->tss.esp0 - sizeof(syscall_frame_t));
+    frame->eip = entry;
+    frame->eax = frame->ebx = frame->ecx = frame->edx = 0;
+    frame->esi = frame->edi = frame->ebp = 0;
+    frame->eflags = EFLAGS_DEFAULT| EFLAGS_IF;  // 段寄存器无需修改
+
+    // 内核栈不用设置，保持不变，后面调用memory_destroy_uvm并不会销毁内核栈的映射。
+    // 但用户栈需要更改, 同样要加上调用门的参数压栈空间
+    frame->esp = stack_top - sizeof(uint32_t)*SYSCALL_PARAM_COUNT; // source/kernel/init/start.S retf $(5*4)
+
     // 切换到新的页表
     task->tss.cr3 = new_page_dir;
     mmu_set_page_dir(new_page_dir);   // 切换至新的页表。由于不用访问原栈及数据，所以并无问题
