@@ -830,7 +830,11 @@ uint32_t memory_get_paddr (uint32_t page_dir, uint32_t vaddr) {
 
 ![image-20241124223430587](.assets/image-20241124223430587.png)
 
+### 压栈argc，**argv ###
 
+argv` 是一个类型为 `char *[] 的数组，其中每个元素都是一个 char *
+
+![image-20241201231207185](.assets/image-20241201231207185.png)
 
 # OS #
 

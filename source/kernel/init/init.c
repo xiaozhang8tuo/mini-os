@@ -34,7 +34,7 @@ void kernel_init(boot_info_t* boot_info) {
 //         // sem_wait(&sem);
 //         log_printf("init task: %d", count++);
 //         // sys_sleep(1000);
-//         // sys_sched_yield();
+//         // sys_yield();
 //     }
 // }
 
@@ -132,7 +132,7 @@ void init_main(void) {
     //     log_printf("main task: %d", count++);
     //     // sem_notify(&sem);
     //     // sys_sleep(1000);
-    //     // sys_sched_yield();
+    //     // sys_yield();
     // }
 
     task_first_init();
