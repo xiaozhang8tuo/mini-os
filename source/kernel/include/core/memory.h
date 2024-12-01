@@ -14,6 +14,8 @@
 
 #define MEM_TASK_STACK_TOP          (0xE0000000)        // 初始栈的位置  
 #define MEM_TASK_STACK_SIZE         (MEM_PAGE_SIZE * 500)   // 初始500KB栈
+#define MEM_TASK_ARG_SIZE           (MEM_PAGE_SIZE * 4)     // 参数和环境变量占用的大小
+
 
 typedef struct _addr_alloc_t {
     mutex_t mutex;
@@ -41,5 +43,7 @@ void memory_destroy_uvm (uint32_t page_dir);
 uint32_t memory_copy_uvm (uint32_t page_dir);
 
 uint32_t memory_get_paddr (uint32_t page_dir, uint32_t vaddr);
+
+int memory_copy_uvm_data(uint32_t to, uint32_t page_dir, uint32_t from, uint32_t size);
 
 #endif

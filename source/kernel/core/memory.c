@@ -352,6 +352,38 @@ uint32_t memory_alloc_for_page_dir (uint32_t page_dir, uint32_t vaddr, uint32_t 
 
 
 /**
+ * @brief 在不同的进程空间中拷贝字符串
+ * page_dir为目标页表，当前仍为老页表
+ */
+int memory_copy_uvm_data(uint32_t to, uint32_t page_dir, uint32_t from, uint32_t size) {
+    char *buf, *pa0;
+
+    while(size > 0){
+        // 获取目标的物理地址, 也即其另一个虚拟地址
+        uint32_t to_paddr = memory_get_paddr(page_dir, to);
+        if (to_paddr == 0) {
+            return -1;
+        }
+
+        // 计算当前可拷贝的大小
+        uint32_t offset_in_page = to_paddr & (MEM_PAGE_SIZE - 1);
+        uint32_t curr_size = MEM_PAGE_SIZE - offset_in_page;
+        if (curr_size > size) {
+            curr_size = size;       // 如果比较大，超过页边界，则只拷贝此页内的
+        }
+
+        kernel_memcpy((void *)to_paddr, (void *)from, curr_size);
+
+        size -= curr_size;
+        to += curr_size;
+        from += curr_size;
+  }
+
+  return 0;
+}
+
+
+/**
  * @brief 为指定的虚拟地址空间分配多页内存
  */
 int memory_alloc_page_for (uint32_t vaddr, uint32_t size, int perm) {

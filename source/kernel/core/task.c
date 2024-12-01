@@ -99,12 +99,19 @@ int task_init(task_t* task, const char* name, int flag, uint32_t entry, uint32_t
     list_node_init(&task->wait_node);
     irq_state_t state = irq_enter_protection();
     task->pid = (uint32_t)task;   // 使用地址，能唯一
-    task_set_ready(task);
     list_insert_last(&task_manager.task_list, &task->all_node);
     irq_leave_protection(state);
     return 0;
 }
 
+/**
+ * @brief 启动任务
+ */
+void task_start(task_t * task) {
+    irq_state_t state = irq_enter_protection();
+    task_set_ready(task);
+    irq_leave_protection(state);
+}
 
 /**
  * @brief 任务任务初始时分配的各项资源
@@ -162,6 +169,7 @@ void task_manager_init(void) {
 
     task_init(&task_manager.idle_task, "idle_task", TASK_FLAG_SYSTEM, 
                 (uint32_t)idle_task_entry, 0);     // 运行于内核模式，无需指定特权级3的栈
+    task_start(&task_manager.idle_task);
 }
 
 void task_first_init(void) {
@@ -176,14 +184,17 @@ void task_first_init(void) {
     uint32_t first_start = (uint32_t)first_task_entry;
 
     task_init(&task_manager.first_task, "first task", 0, first_task_entry, first_start + alloc_size);
-    write_tr(task_manager.first_task.tss_sel);
     task_manager.curr_task = &task_manager.first_task;
 
     mmu_set_page_dir(task_manager.first_task.tss.cr3);
 
     // 分配一页内存供代码存放使用，然后将代码复制过去, PTE_U :用户态特权级3可以读
     memory_alloc_page_for(first_start,  alloc_size, PTE_P | PTE_W | PTE_U);
-    kernel_memcpy((void *)first_start, (void *)s_first_task, copy_size);
+    kernel_memcpy((void *)first_start, (void *)&s_first_task, copy_size);
+    
+    // 启动进程
+    task_start(&task_manager.first_task);
+    write_tr(task_manager.first_task.tss_sel);
 }
 
 task_t* task_first_task(void) {
@@ -234,7 +245,7 @@ void task_dispatch(void) {
     // irq_leave_protection(state);
 }
 
-int sys_sched_yield(void) {
+int sys_yield(void) {
     irq_state_t state = irq_enter_protection();
     if (list_count(&task_manager.ready_list) > 1) {
         task_t* curr_task = task_current();
@@ -377,6 +388,7 @@ int sys_fork (void) {
     }
 
     // 创建成功，返回子进程的pid
+    task_start(child_task);
     return child_task->pid;
 fork_failed:
     if (child_task) {
@@ -515,8 +527,52 @@ load_failed:
 }
 
 
+/**
+ * @brief 复制进程参数到栈中。注意argv和env指向的空间在另一个页表里
+ */
+static int copy_args (char * to, uint32_t page_dir, int argc, char **argv) {
+    // 在stack_top中依次写入argc, argv指针，参数字符串
+    task_args_t task_args;
+    task_args.argc = argc;
+    task_args.argv = (char **)(to + sizeof(task_args_t));
+
+    // 复制各项参数, 跳过task_args和参数表
+    // 各argv参数写入的内存空间
+    char * dest_arg = to + sizeof(task_args_t) + sizeof(char *) * (argc);   // 留出结束符
+    
+    // argv表
+    char ** dest_argv_tb = (char **)memory_get_paddr(page_dir, (uint32_t)(to + sizeof(task_args_t)));
+    ASSERT(dest_argv_tb != 0);
+
+    for (int i = 0; i < argc; i++) {
+        char * from = argv[i];
+
+        // 不能用kernel_strcpy，因为to和argv不在一个页表里
+        int len = kernel_strlen(from) + 1;   // 包含结束符
+        int err = memory_copy_uvm_data((uint32_t)dest_arg, page_dir, (uint32_t)from, len);
+        ASSERT(err >= 0);
+
+        // 关联ar
+        dest_argv_tb[i] = dest_arg;
+
+        // 记录下位置后，复制的位置前移
+        dest_arg += len;
+    }
+
+     // 写入task_args
+    return memory_copy_uvm_data((uint32_t)to, page_dir, (uint32_t)&task_args, sizeof(task_args_t));
+}
+
+/**
+ * @brief 加载一个进程
+ * 这个比较复杂，argv/name/env都是原进程空间中的数据，execve中涉及到页表的切换
+ * 在对argv和name进行处理时，会涉及到不同进程空间中数据的传递。
+ */
 int sys_execve(char *name, char * const *argv, char * const *env) {
     task_t * task = task_current();
+
+    // 后面会切换页表，所以先处理需要从进程空间取数据的情况
+    kernel_strncpy(task->name, get_file_name(name), TASK_NAME_SIZE);
 
     // 现在开始加载了，先准备应用页表，由于所有操作均在内核区中进行，所以可以直接先切换到新页表
     uint32_t old_page_dir = task->tss.cr3;
@@ -532,12 +588,19 @@ int sys_execve(char *name, char * const *argv, char * const *env) {
     }
 
     // 准备用户栈空间，预留环境环境及参数的空间
-    uint32_t stack_top = MEM_TASK_STACK_TOP;
+    uint32_t stack_top = MEM_TASK_STACK_TOP - MEM_TASK_ARG_SIZE;    // 预留一部分参数空间
     int err = memory_alloc_for_page_dir(
                             new_page_dir,
                             MEM_TASK_STACK_TOP - MEM_TASK_STACK_SIZE, //栈是从高到底的，
                             MEM_TASK_STACK_SIZE, 
                             PTE_P | PTE_U | PTE_W);
+    if (err < 0) {
+        goto exec_failed;
+    }
+
+    // 复制参数，写入到栈顶的后边
+    int argc = strings_count(argv);
+    err = copy_args((char *)stack_top, new_page_dir, argc, argv);
     if (err < 0) {
         goto exec_failed;
     }

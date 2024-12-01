@@ -8,6 +8,13 @@
 #define TASK_TIME_SLICE_DEFAULT 10
 
 #define TASK_FLAG_SYSTEM       	(1 << 0)		// 系统任务
+
+typedef struct _task_args_t {
+	uint32_t ret_addr;		// 返回地址，无用
+	uint32_t argc;
+	char **argv;
+}task_args_t;
+
 typedef struct _task_t {
     // uint32_t* stack;
     enum {
@@ -56,7 +63,7 @@ void task_first_init(void);
 task_t* task_first_task(void);
 void task_set_ready(task_t* task);
 void task_set_block(task_t* task);
-int sys_sched_yield(void);
+int sys_yield(void);
 task_t * task_current(void);
 void task_timer_tick(void);
 
