@@ -45,5 +45,5 @@ uint32_t memory_copy_uvm (uint32_t page_dir);
 uint32_t memory_get_paddr (uint32_t page_dir, uint32_t vaddr);
 
 int memory_copy_uvm_data(uint32_t to, uint32_t page_dir, uint32_t from, uint32_t size);
-
+char * sys_sbrk(int incr);
 #endif

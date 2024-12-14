@@ -419,3 +419,11 @@ void memory_free_page (uint32_t addr) {
         pte->v = 0;
     }
 }
+
+
+/**
+ * @brief 调整堆的内存分配，返回堆之前的指针
+ */
+char * sys_sbrk(int incr) {
+    return (char *)0;
+}

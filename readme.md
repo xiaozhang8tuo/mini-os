@@ -864,6 +864,27 @@ argv` 是一个类型为 `char *[] 的数组，其中每个元素都是一个 ch
 
 ![image-20241214112800143](.assets/image-20241214112800143.png)
 
+
+
+```cpp
+
+```
+
+功能：用于增长应用程序的数据空间increment字节。当incr=0时，返回当前的program break.
+返回值：成功时，返回新分配空间的起始地址，错误返回-1。
+
+## 27 引入newlib库 ##
+
+![image-20241214151456422](.assets/image-20241214151456422.png)
+
+newlib是个通用的c库，对应的操作系统底层需要实现一些api给newlib调用，在lib_syscall.h中
+
+![image-20241214151346822](.assets/image-20241214151346822.png)
+
+![image-20241214151316674](.assets/image-20241214151316674.png)
+
+
+
 # OS #
 
 ![image-20230813211151879](.assets/image-20230813211151879.png)

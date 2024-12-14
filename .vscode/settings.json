@@ -26,7 +26,8 @@
         "log.h": "c",
         "syscall.h": "c",
         "klib.h": "c",
-        "fs.h": "c"
+        "fs.h": "c",
+        "stdio.h": "c"
     },
     "files.exclude": {
     "**/source_tmp/": true

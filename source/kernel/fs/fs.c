@@ -3,6 +3,7 @@
 #include "tools/klib.h"
 #include "fs/fs.h"
 #include "comm/boot_info.h"
+#include <sys/stat.h>
 
 #define TEMP_FILE_ID		100
 #define TEMP_ADDR        	(8*1024*1024)      // 在0x800000处缓存原始
@@ -88,4 +89,19 @@ int sys_lseek(int file, int ptr, int dir) {
  * 关闭文件
  */
 int sys_close(int file) {
+}
+
+
+/**
+ * 判断文件描述符与tty关联
+ */
+int sys_isatty(int file) {
+	return -1;
+}
+
+/**
+ * @brief 获取文件状态
+ */
+int sys_fstat(int file, struct stat *st) {
+    return -1;
 }

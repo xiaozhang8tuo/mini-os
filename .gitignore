@@ -33,6 +33,7 @@
 *.app
 
 image
+newlib
 build
 *.elf 
 *.o 

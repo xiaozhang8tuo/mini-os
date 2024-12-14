@@ -26,6 +26,10 @@ static const syscall_handler_t sys_table[] = {
 	[SYS_write] = (syscall_handler_t)sys_write,
 	[SYS_close] = (syscall_handler_t)sys_close,
 	[SYS_lseek] = (syscall_handler_t)sys_lseek,
+
+	[SYS_isatty] = (syscall_handler_t)sys_isatty,
+	[SYS_sbrk] = (syscall_handler_t)sys_sbrk,
+	[SYS_fstat] = (syscall_handler_t)sys_fstat,
 };
 
 
