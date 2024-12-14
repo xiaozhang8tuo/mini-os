@@ -25,7 +25,8 @@
         "bitmap.h": "c",
         "log.h": "c",
         "syscall.h": "c",
-        "klib.h": "c"
+        "klib.h": "c",
+        "fs.h": "c"
     },
     "files.exclude": {
     "**/source_tmp/": true
