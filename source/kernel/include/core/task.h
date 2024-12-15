@@ -32,6 +32,9 @@ typedef struct _task_t {
     char name[TASK_NAME_SIZE];
     int pid;				// 进程的pid
     struct _task_t * parent;		// 父进程
+	uint32_t heap_start;		// 堆的顶层地址
+	uint32_t heap_end;			// 堆结束地址
+	
     list_node_t run_node;
     list_node_t wait_node;
     list_node_t all_node;

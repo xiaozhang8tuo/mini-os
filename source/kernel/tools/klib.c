@@ -142,39 +142,47 @@ int kernel_memcmp (void * d1, void * d2, int size) {
 }
 
 void kernel_itoa(char* buf, int num, int base) {
-    static const char* num2ch = {"0123456789ABCDEF"};
+    static const char* num2ch = "0123456789ABCDEF";
     char* p = buf;
     int old_num = num;
-    
+
     if ((base != 2) && (base != 8) && (base != 10) && (base != 16)) {
         *p = '\0';
         return;
     }
 
+    int signed_num = 0;
     if ((num < 0) && (base == 10)) {
         *p++ = '-';
-        num = -num;
+        signed_num = 1;
     }
 
-    do {
-        char ch = num2ch[num % base];
-        *p++ = ch;
-        num = num/base;
-
-    } while (num);
+    if (signed_num) {
+        do {
+            char ch = num2ch[num % base];
+            *p++ = ch;
+            num /= base;
+        } while (num);
+    }
+    else {
+        uint32_t u_num = (uint32_t)num;
+        do {
+            char ch = num2ch[u_num % base];
+            *p++ = ch;
+            u_num /= base;
+        } while (u_num);
+    }
     *p-- = '\0';
 
-    char* start = (old_num > 0) ? buf : buf+1;
-    while(start < p) {
+    // 将转换结果逆序，生成最终的结果
+    char* start = (!signed_num) ? buf : buf + 1;
+    while (start < p) {
         char ch = *start;
         *start = *p;
-        *p = ch;
-
-        p--;
+        *p-- = ch;
         start++;
     }
 }
-
 
 void kernel_sprintf(char* str_buf, const char* fmt, ...) {
     va_list args;
