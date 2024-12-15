@@ -4,6 +4,7 @@
 #include "fs/fs.h"
 #include "comm/boot_info.h"
 #include <sys/stat.h>
+#include "tools/log.h"
 
 #define TEMP_FILE_ID		100
 #define TEMP_ADDR        	(8*1024*1024)      // 在0x800000处缓存原始
@@ -71,7 +72,9 @@ int sys_read(int file, char *ptr, int len) {
  * 写文件
  */
 int sys_write(int file, char *ptr, int len) {
-    return -1;
+    ptr[len] = '\0';
+    log_printf("%s", ptr);
+    return len;
 }
 
 /**
@@ -103,5 +106,7 @@ int sys_isatty(int file) {
  * @brief 获取文件状态
  */
 int sys_fstat(int file, struct stat *st) {
-    return -1;
+    kernel_memset(st, 0, sizeof(struct stat));
+    st->st_size = 0;
+    return 0;
 }
