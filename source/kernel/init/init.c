@@ -11,6 +11,7 @@
 #include "tools/list.h"
 #include "ipc/sem.h"
 #include "core/memory.h"
+#include "dev/console.h"
 
 void kernel_init(boot_info_t* boot_info) {
     // ASSERT(boot_info->ram_region_count != 0);
@@ -18,6 +19,7 @@ void kernel_init(boot_info_t* boot_info) {
     cpu_init();
     memory_init(boot_info);
     log_init();
+    console_init();
     irq_init();
     timer_init();
 
