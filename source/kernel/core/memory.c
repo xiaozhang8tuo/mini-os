@@ -2,6 +2,7 @@
 #include "tools/log.h"
 #include "tools/klib.h"
 #include "cpu/mmu.h"
+#include "dev/console.h"
 
 static addr_alloc_t paddr_alloc;
 
@@ -140,6 +141,7 @@ void create_kernel_table(void) {
         {s_data, (void*)MEM_EBDA_START, s_data, PTE_W},
         // 扩展存储空间一一映射，方便直接操作 这里扩展的空间，虚拟地址和物理地址一致
         {(void *)MEM_EXT_START, (void *)MEM_EXT_END, (void *)MEM_EXT_START, PTE_W},
+        {(void *)CONSOLE_DISP_ADDR, (void *)(CONSOLE_DISP_END - 1), (void *)CONSOLE_VIDEO_BASE, PTE_W},
     };
 
     for (int i = 0; i < sizeof(kernel_map) / sizeof(memory_map_t); i++) {

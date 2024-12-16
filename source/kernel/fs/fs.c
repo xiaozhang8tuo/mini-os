@@ -5,6 +5,7 @@
 #include "comm/boot_info.h"
 #include <sys/stat.h>
 #include "tools/log.h"
+#include "dev/console.h"
 
 #define TEMP_FILE_ID		100
 #define TEMP_ADDR        	(8*1024*1024)      // 在0x800000处缓存原始
@@ -72,8 +73,10 @@ int sys_read(int file, char *ptr, int len) {
  * 写文件
  */
 int sys_write(int file, char *ptr, int len) {
-    ptr[len] = '\0';
-    log_printf("%s", ptr);
+    // ptr[len] = '\0';
+    // log_printf("%s", ptr);
+
+    console_write(0, ptr, len);
     return len;
 }
 
