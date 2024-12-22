@@ -9,6 +9,54 @@ static console_t console_buf[CONSOLE_NR];
 
 
 /**
+ * @brief 擦除从start到end的行
+ */
+static void erase_rows (console_t * console, int start, int end) {
+    volatile disp_char_t * disp_start = console->disp_base + console->display_cols * start;
+    volatile disp_char_t * disp_end = console->disp_base + console->display_cols * (end + 1);
+
+    while (disp_start < disp_end) {
+        disp_start->c = ' ';
+        disp_start->foreground = console->foreground;
+        disp_start->background = console->background;
+
+        disp_start++;
+    }
+}
+
+/**
+ * 整体屏幕上移若干行
+ */
+static void scroll_up(console_t * console, int lines) {
+    // 整体上移
+    disp_char_t * dest = console->disp_base;
+    disp_char_t * src = console->disp_base + console->display_cols * lines;
+    uint32_t size = (console->display_rows - lines) * console->display_cols * sizeof(disp_char_t);
+    kernel_memcpy(dest, src, size);
+
+    // 擦除最后一行
+    erase_rows(console, console->display_rows - lines, console->display_rows - 1);
+
+    console->cursor_row -= lines;
+}
+
+static void move_to_col0 (console_t * console) {
+	console->cursor_col = 0;
+}
+
+/**
+ * 换至下一行
+ */
+static void move_next_line (console_t * console) {
+	console->cursor_row++;
+
+	// 超出当前屏幕显示的所有行，上移一行
+	if (console->cursor_row >= console->display_rows) {
+		scroll_up(console, 1);
+	}
+}
+
+/**
  * 将光标往前移一个字符
  */
 static void move_forward (console_t * console, int n) {
@@ -16,6 +64,10 @@ static void move_forward (console_t * console, int n) {
 		if (++console->cursor_col >= console->display_cols) {
 			console->cursor_col = 0;
             console->cursor_row++;
+            if (console->cursor_row >= console->display_rows) {
+                // 超出末端，上移
+                scroll_up(console, 1);
+            }
 		}
 	}
 }
@@ -33,7 +85,17 @@ static void show_char(console_t * console, char c) {
     move_forward(console, 1);
 }
 
-/**
+static void clear_display (console_t * console) {
+    int size = console->display_cols * console->display_rows;
+
+    disp_char_t * start = console->disp_base;
+    for (int i = 0; i < size; i++, start++) {
+        // 以下分开三步写一个字符，速度慢一些
+        start->c = ' ';
+        start->background = console->background;
+        start->foreground = console->foreground;
+    }
+}
 
 /**
  * 初始化控制台及键盘
@@ -49,6 +111,8 @@ int console_init (void) {
         console->cursor_col = 0;
         console->foreground = COLOR_White;
         console->background = COLOR_Black;
+
+        clear_display(console);
     }
 
 	return 0;
@@ -64,7 +128,15 @@ int console_write (int dev, char * data, int size) {
     int len;
 	for (len = 0; len < size; len++){
         char c = *data++;
-        show_char(console, c);
+        switch (c) {
+            case '\n':
+                move_to_col0(console);
+                move_next_line(console);
+                break;
+            default:
+                show_char(console, c);
+                break;
+        }
     }
 	return len;
 }

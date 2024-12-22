@@ -11,7 +11,8 @@ int main (int argc, char **argv) {
     printf("hello from shell\n");
     puts("TEST!");
     for (int i = 0; i < argc; i++) {
-        print_msg("arg: %s", (int)argv[i]);
+//        print_msg("arg: %s", (int)argv[i]);
+        printf("arg: %s\n", (int)argv[i]);
     }
 
     // 创建一个自己的副本
@@ -20,7 +21,8 @@ int main (int argc, char **argv) {
     yield();
 
     for (;;) {
-        print_msg("pid=%d", getpid());
+        // print_msg("pid=%d", getpid());
+        printf("pid=%d\n", getpid());
         msleep(1000);
     }
 }
