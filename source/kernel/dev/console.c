@@ -110,6 +110,29 @@ static void show_char(console_t * console, char c) {
     move_forward(console, 1);
 }
 
+/**
+ * 光标左移
+ * 如果左移成功，返回0；否则返回-1
+ */
+static int move_backword (console_t * console, int n) {
+    int status = -1;
+
+    for (int i = 0; i < n; i++) {
+        if (console->cursor_col > 0) {
+            // 非列超始处,可回退
+            console->cursor_col--;
+            status = 0;
+        } else if (console->cursor_row > 0) {
+            // 列起始处，但非首行，可回腿
+            console->cursor_row--;
+            console->cursor_col = console->display_cols - 1;
+            status = 0;
+        }
+    }
+
+    return status;
+}
+
 static void clear_display (console_t * console) {
     int size = console->display_cols * console->display_rows;
 
@@ -119,6 +142,17 @@ static void clear_display (console_t * console) {
         start->c = ' ';
         start->background = console->background;
         start->foreground = console->foreground;
+    }
+}
+
+/**
+ * 擦除前一字符，回退光标，输入' '，做删除，在回退光标
+ * @param console
+ */
+static void erase_backword (console_t * console) {
+    if (move_backword(console, 1) == 0) {
+        show_char(console, ' ');
+        move_backword(console, 1);
     }
 }
 
@@ -155,13 +189,26 @@ int console_write (int dev, char * data, int size) {
 	for (len = 0; len < size; len++){
         char c = *data++;
         switch (c) {
+            case 0x7F:
+                erase_backword(console);
+                break;
+            case '\b':		// 左移一个字符
+                move_backword(console, 1);
+                break;
+            case '\r':
+                move_to_col0(console);
+                break;
             case '\n':
                 move_to_col0(console);
                 move_next_line(console);
                 break;
-            default:
-                show_char(console, c);
+                // 普通字符显示
+            default: {
+                if ((c >= ' ') && (c <= '~')) {
+                    show_char(console, c);
+                }
                 break;
+            }
         }
     }
     update_cursor_pos(console);

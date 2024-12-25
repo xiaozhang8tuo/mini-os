@@ -8,6 +8,10 @@ int main (int argc, char **argv) {
     sbrk(4096*2 + 200);// sbrk(0): end = 0x81005330 sbrk(8392): end = 0x81007524, 0x81007524-0x81005330=100 + 200 + (4096*2 + 200)
     sbrk(4096*5 + 1234);
 
+    printf("abef\b\b\b\bcd\n");    // \b:backword 输出cdef
+    printf("abcd\x7f;fg\n");   // 7f:删除 输出 abc;fg
+
+
     printf("hello from shell\n");
     puts("TEST!");
     for (int i = 0; i < argc; i++) {
