@@ -10,6 +10,8 @@
 #define CONSOLE_COL_MAX				80			// 最大列数
 // 显示器共80列，25行，按字符显示，每个字符需要用两个字节(VGA)模式下表示
 
+#define ASCII_ESC                   0x1b        // ESC ascii码            
+
 
 typedef enum _cclor_t {
     COLOR_Black			= 0,
@@ -47,8 +49,15 @@ typedef union {
  */
 typedef struct _console_t {
 	disp_char_t * disp_base;	// 显示基地址
+
+    enum {
+        CONSOLE_WRITE_NORMAL,			// 普通模式
+        CONSOLE_WRITE_ESC,				// ESC转义序列
+    }write_state;
+
     int cursor_row, cursor_col;		// 当前编辑的行和列
     int display_rows, display_cols;	// 显示界面的行数和列数
+    int old_cursor_col, old_cursor_row;	// 保存的光标位置
     cclor_t foreground, background;	// 前后景色
 }console_t;
 

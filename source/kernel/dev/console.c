@@ -157,6 +157,19 @@ static void erase_backword (console_t * console) {
 }
 
 /**
+ * 只支持保存光标
+ */
+void save_cursor(console_t * console) {
+    console->old_cursor_col = console->cursor_col;
+    console->old_cursor_row = console->cursor_row;
+}
+
+void restore_cursor(console_t * console) {
+    console->cursor_col = console->old_cursor_col;
+    console->cursor_row = console->old_cursor_row;
+}
+
+/**
  * 初始化控制台及键盘
  */
 int console_init (void) {
@@ -170,12 +183,68 @@ int console_init (void) {
         int cursor_pos = read_cursor_pos();
         console->cursor_row = cursor_pos / console->display_cols;
         console->cursor_col = cursor_pos % console->display_cols;
+
+        console->old_cursor_row = console->cursor_row;
+        console->old_cursor_col = console->cursor_col;
+
         console->foreground = COLOR_White;
         console->background = COLOR_Black;
         // clear_display(console);
     }
 
 	return 0;
+}
+
+/**
+ * 普通状态下的字符的写入处理
+ */
+static void write_normal (console_t * console, char c) {
+    switch (c) {
+        case ASCII_ESC:
+            console->write_state = CONSOLE_WRITE_ESC;
+            break;
+        case 0x7F:
+            erase_backword(console);
+            break;
+        case '\b':		// 左移一个字符
+            move_backword(console, 1);
+            break;
+        case '\r':
+            move_to_col0(console);
+            break;
+        case '\n':  // 暂时这样处理
+            move_to_col0(console);
+            move_next_line(console);
+            break;
+            // 普通字符显示
+        default: {
+            if ((c >= ' ') && (c <= '~')) {
+                show_char(console, c);
+            }
+            break;
+        }
+    }
+}
+
+/**
+ * 写入以ESC开头的序列
+ */
+static void write_esc (console_t * console, char c) {
+    // https://blog.csdn.net/ScilogyHunter/article/details/106874395
+    // ESC状态处理, 转义序列模式 ESC 0x20-0x27(0或多个) 0x30-0x7e
+    switch (c) {
+        case '7':		// ESC 7 保存光标
+            save_cursor(console);
+            console->write_state = CONSOLE_WRITE_NORMAL;
+            break;
+        case '8':		// ESC 8 恢复光标
+            restore_cursor(console);
+            console->write_state = CONSOLE_WRITE_NORMAL;
+            break;
+        default:
+            console->write_state = CONSOLE_WRITE_NORMAL;
+            break;
+    }
 }
 
 /**
@@ -188,31 +257,18 @@ int console_write (int dev, char * data, int size) {
     int len;
 	for (len = 0; len < size; len++){
         char c = *data++;
-        switch (c) {
-            case 0x7F:
-                erase_backword(console);
-                break;
-            case '\b':		// 左移一个字符
-                move_backword(console, 1);
-                break;
-            case '\r':
-                move_to_col0(console);
-                break;
-            case '\n':
-                move_to_col0(console);
-                move_next_line(console);
-                break;
-                // 普通字符显示
-            default: {
-                if ((c >= ' ') && (c <= '~')) {
-                    show_char(console, c);
-                }
+        switch (console->write_state) {
+            case CONSOLE_WRITE_NORMAL: {
+                write_normal(console, c);
                 break;
             }
+            case CONSOLE_WRITE_ESC:
+                write_esc(console, c);
+                break;
         }
     }
     update_cursor_pos(console);
-	return len;
+    return len;
 }
 
 /**

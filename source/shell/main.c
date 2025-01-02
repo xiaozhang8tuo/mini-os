@@ -10,7 +10,7 @@ int main (int argc, char **argv) {
 
     printf("abef\b\b\b\bcd\n");    // \b:backword 输出cdef
     printf("abcd\x7f;fg\n");   // 7f:删除 输出 abc;fg
-
+    printf("\0337Hello,word!\0338123\n");  // ESC 7,8 输出123lo,word!
 
     printf("hello from shell\n");
     puts("TEST!");
