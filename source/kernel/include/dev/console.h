@@ -11,6 +11,7 @@
 // 显示器共80列，25行，按字符显示，每个字符需要用两个字节(VGA)模式下表示
 
 #define ASCII_ESC                   0x1b        // ESC ascii码            
+#define	ESC_PARAM_MAX				10			// 最多支持的ESC [ 参数数量
 
 
 typedef enum _cclor_t {
@@ -53,12 +54,16 @@ typedef struct _console_t {
     enum {
         CONSOLE_WRITE_NORMAL,			// 普通模式
         CONSOLE_WRITE_ESC,				// ESC转义序列
+        CONSOLE_WRITE_SQUARE,           // ESC [接收状态
     }write_state;
 
     int cursor_row, cursor_col;		// 当前编辑的行和列
     int display_rows, display_cols;	// 显示界面的行数和列数
     int old_cursor_col, old_cursor_row;	// 保存的光标位置
     cclor_t foreground, background;	// 前后景色
+
+    int esc_param[ESC_PARAM_MAX];	// ESC [ ;;参数数量
+    int curr_param_index;
 }console_t;
 
 int console_init (void);

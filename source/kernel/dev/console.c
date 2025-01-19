@@ -157,6 +157,24 @@ static void erase_backword (console_t * console) {
 }
 
 /**
+ * 将光标对齐到8的倍数位置上
+ */
+static void move_next_tab(console_t * console) {
+    int col = console->cursor_col;
+
+    col = (col + 7) / 8 * 8;		// 下一显示位置
+    if (col >= console->display_cols) {
+        col = 0;
+        console->cursor_row++;
+        if (console->cursor_row >= console->display_rows) {
+            // 超出末端，上移
+            scroll_up(console, 1);
+        }
+    }
+    console->cursor_col = col;
+}
+
+/**
  * 只支持保存光标
  */
 void save_cursor(console_t * console) {
@@ -209,6 +227,10 @@ static void write_normal (console_t * console, char c) {
         case '\b':		// 左移一个字符
             move_backword(console, 1);
             break;
+            // 换行处理
+        case '\t':		// 对齐的下一制表符
+            move_next_tab(console);
+            break;
         case '\r':
             move_to_col0(console);
             break;
@@ -227,6 +249,14 @@ static void write_normal (console_t * console, char c) {
 }
 
 /**
+ * 清空参数表
+ */
+static void clear_esc_param (console_t * console) {
+	kernel_memset(console->esc_param, 0, sizeof(console->esc_param));
+	console->curr_param_index = 0;
+}
+
+/**
  * 写入以ESC开头的序列
  */
 static void write_esc (console_t * console, char c) {
@@ -241,9 +271,62 @@ static void write_esc (console_t * console, char c) {
             restore_cursor(console);
             console->write_state = CONSOLE_WRITE_NORMAL;
             break;
+        case '[':
+            clear_esc_param(console);
+            console->write_state = CONSOLE_WRITE_SQUARE;
+            break;
         default:
             console->write_state = CONSOLE_WRITE_NORMAL;
             break;
+    }
+}
+
+/**
+ * 设置字符属性
+ */
+static void set_font_style (console_t * console) {
+	static const cclor_t color_table[] = {
+			COLOR_Black, COLOR_Red, COLOR_Green, COLOR_Yellow, // 0-3
+			COLOR_Blue, COLOR_Magenta, COLOR_Cyan, COLOR_White, // 4-7
+	};
+
+	for (int i = 0; i < console->curr_param_index; i++) {
+		int param = console->esc_param[i];
+		if ((param >= 30) && (param <= 37)) {  // 前景色：30-37
+			console->foreground = color_table[param - 30];
+		} else if ((param >= 40) && (param <= 47)) {
+			console->background = color_table[param - 40];
+		} else if (param == 39) { // 39=默认前景色
+			console->foreground = COLOR_White;
+		} else if (param == 49) { // 49=默认背景色
+			console->background = COLOR_Black;
+		}
+	}
+}
+
+/**
+ * @brief 处理ESC [Pn;Pn 开头的字符串
+ */
+static void write_esc_square (console_t * console, char c) {
+    // 接收参数
+    if ((c >= '0') && (c <= '9')) {
+        // 解析当前参数
+        int * param = &console->esc_param[console->curr_param_index];
+        *param = *param * 10 + c - '0';
+    } else if ((c == ';') && console->curr_param_index < ESC_PARAM_MAX) {
+        // 参数结束，继续处理下一个参数
+        console->curr_param_index++;
+    } else {
+        // 结束上一字符的处理
+        console->curr_param_index++;
+
+        // 已经接收到所有的字符，继续处理
+        switch (c) {
+        case 'm': // 设置字符属性
+            set_font_style(console);
+            break;
+        }
+        console->write_state = CONSOLE_WRITE_NORMAL;
     }
 }
 
@@ -264,6 +347,9 @@ int console_write (int dev, char * data, int size) {
             }
             case CONSOLE_WRITE_ESC:
                 write_esc(console, c);
+                break;
+            case CONSOLE_WRITE_SQUARE:
+                write_esc_square(console, c);
                 break;
         }
     }
