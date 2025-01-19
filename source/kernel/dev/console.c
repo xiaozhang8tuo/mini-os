@@ -305,6 +305,60 @@ static void set_font_style (console_t * console) {
 }
 
 /**
+ * @brief 光标左移，但不起始左边界，也不往上移
+ */
+static void move_left (console_t * console, int n) {
+    // 至少移致动1个
+    if (n == 0) {
+        n = 1;
+    }
+
+    int col = console->cursor_col - n;
+    console->cursor_col = (col >= 0) ? col : 0;
+}
+
+/**
+ * @brief 光标右移，但不起始右边界，也不往下移
+ */
+static void move_right (console_t * console, int n) {
+    // 至少移致动1个
+    if (n == 0) {
+        n = 1;
+    }
+
+    int col = console->cursor_col + n;
+    if (col >= console->display_cols) {
+        console->cursor_col = console->display_cols - 1;
+    } else {
+        console->cursor_col = col;
+    }
+}
+
+/**
+ * 移动光标
+ */
+static void move_cursor(console_t * console) {
+    console->cursor_row = console->esc_param[0];
+    console->cursor_col = console->esc_param[1];
+}
+
+/**
+ * 擦除字符操作
+ */
+static void erase_in_display(console_t * console) {
+	if (console->curr_param_index < 0) {
+		return;
+	}
+
+	int param = console->esc_param[0];
+	if (param == 2) {
+		// 擦除整个屏幕
+		erase_rows(console, 0, console->display_rows - 1);
+        console->cursor_col = console->cursor_row = 0;
+	}
+}
+
+/**
  * @brief 处理ESC [Pn;Pn 开头的字符串
  */
 static void write_esc_square (console_t * console, char c) {
@@ -324,6 +378,19 @@ static void write_esc_square (console_t * console, char c) {
         switch (c) {
         case 'm': // 设置字符属性
             set_font_style(console);
+            break;
+        case 'D':	// 光标左移n个位置 ESC [Pn D
+            move_left(console, console->esc_param[0]);
+            break;
+        case 'C':
+            move_right(console, console->esc_param[0]);
+            break;
+        case 'H':
+        case 'f':
+            move_cursor(console);
+            break;
+        case 'J':
+            erase_in_display(console);
             break;
         }
         console->write_state = CONSOLE_WRITE_NORMAL;
