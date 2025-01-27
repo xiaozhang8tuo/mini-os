@@ -95,6 +95,9 @@ exception_handler smd_exception, 19, 0
 exception_handler virtual_exception, 20, 0
 
 exception_handler timer, 0x20, 0
+exception_handler kbd, 0x21, 0
+
+
 
     // simple_switch(&from, to)
     .text

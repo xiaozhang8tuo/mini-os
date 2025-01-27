@@ -12,6 +12,8 @@
 #include "ipc/sem.h"
 #include "core/memory.h"
 #include "dev/console.h"
+#include "dev/kbd.h"
+
 
 void kernel_init(boot_info_t* boot_info) {
     // ASSERT(boot_info->ram_region_count != 0);
@@ -24,6 +26,7 @@ void kernel_init(boot_info_t* boot_info) {
     timer_init();
 
     task_manager_init();
+    kbd_init();
 }
 
 // static task_t init_task;

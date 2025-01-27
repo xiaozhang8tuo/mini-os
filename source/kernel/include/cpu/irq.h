@@ -24,6 +24,7 @@
 #define IRQ20_VE            20
 
 #define IRQ0_TIMER          0x20
+#define IRQ1_KEYBOARD		0x21				// 按键中断
 
 // Figure 6-11. Page-Fault Error Code
 #define ERR_PAGE_P          (1 << 0)
