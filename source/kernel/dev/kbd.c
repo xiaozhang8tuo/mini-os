@@ -75,6 +75,58 @@ static inline int is_make_code(uint8_t key_code) {
 }
 
 /**
+ * 等待可写数据
+ */
+void kbd_wait_send_ready(void) {
+    uint32_t time_out = 100000; 
+    while (time_out--) {
+        if ((inb(KBD_PORT_STAT) & KBD_STAT_SEND_FULL) == 0) {
+            return;
+        }
+    }
+}
+
+/**
+ * 向键盘端口写数据
+ */
+void kbd_write(uint8_t port, uint8_t data) {
+    kbd_wait_send_ready();
+    outb(port, data);
+}
+
+/**
+ * 等待可用的键盘数据
+ */
+void kbd_wait_recv_ready(void) {
+    uint32_t time_out = 100000;
+    while (time_out--) {
+        if (inb(KBD_PORT_STAT) & KBD_STAT_RECV_READY) {
+            return;
+        }
+    }
+}
+
+/**
+ * 读键盘数据
+ */
+uint8_t kbd_read(void) {
+    kbd_wait_recv_ready();
+    return inb(KBD_PORT_DATA);
+}
+
+/**
+ * 更新键盘上状态指示灯
+ */
+static void update_led_status (void) {
+    int data = 0;
+
+    data = (kbd_state.caps_lock ? 1 : 0) << 0;
+    kbd_write(KBD_PORT_DATA, KBD_CMD_RW_LED);
+    kbd_write(KBD_PORT_DATA, data);
+    kbd_read();
+}
+
+/**
  * 处理单字符的标准键
  */
 static void do_normal_key (uint8_t raw_code) {
@@ -90,6 +142,12 @@ static void do_normal_key (uint8_t raw_code) {
 	case KEY_LSHIFT:
 		kbd_state.lshift_press = is_make;  // 仅设置标志位
 		break;
+    case KEY_CAPS:  // 大小写键，设置大小写状态
+		if (is_make) {
+			kbd_state.caps_lock = ~kbd_state.caps_lock;
+			update_led_status();
+		}
+		break;
     default:
         if (is_make) {
             // 根据shift控制取相应的字符，这里有进行大小写转换或者shif转换
@@ -97,6 +155,17 @@ static void do_normal_key (uint8_t raw_code) {
                 key = map_table[key].func;  // 第2功能
             }else {
                 key = map_table[key].normal;  // 第1功能
+            }
+
+            // 根据caps再进行一次字母的大小写转换
+            if (kbd_state.caps_lock) {
+                if ((key >= 'A') && (key <= 'Z')) {
+                    // 大写转小写
+                    key = key - 'A' + 'a';
+                } else if ((key >= 'a') && (key <= 'z')) {
+                    // 小写转大小
+                    key = key - 'a' + 'A';
+                }
             }
 
             // 最后，不管是否是控制字符，都会被写入
