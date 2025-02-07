@@ -13,10 +13,51 @@
 // https://wiki.osdev.org/PS/2_Keyboard
 #define KBD_CMD_RW_LED			0xED   // 写按键
 
-
+// 对应的扫描码
 #define KEY_RSHIFT		0x36
 #define KEY_LSHIFT 		0x2A
 #define KEY_CAPS			0x3A
+
+#define KEY_E0			0xE0	// E0编码
+#define KEY_E1			0xE1	// E1编码
+#define	ASCII_ESC		0x1b
+#define	ASCII_DEL		0x7F
+
+/**
+ * 特殊功能键
+ */
+#define KEY_CTRL 		0x1D		// E0, 1D或1d
+#define KEY_RSHIFT		0x36
+#define KEY_LSHIFT 		0x2A
+#define KEY_ALT 		0x38		// E0, 38或38
+
+#define	KEY_FUNC		 0x8000
+#define KEY_F1			(0x3B)
+#define KEY_F2			(0x3C)
+#define KEY_F3			(0x3D)
+#define KEY_F4			(0x3E)
+#define KEY_F5			(0x3F)
+#define KEY_F6			(0x40)
+#define KEY_F7			(0x41)
+#define KEY_F8			(0x42)
+#define KEY_F9			(0x43)
+#define KEY_F10			(0x44)
+#define KEY_F11			(0x57)
+#define KEY_F12			(0x58)
+
+#define	KEY_SCROLL_LOCK		(0x46)
+#define KEY_HOME			(0x47)
+#define KEY_END				(0x4F)
+#define KEY_PAGE_UP			(0x49)
+#define KEY_PAGE_DOWN		(0x51)
+#define KEY_CURSOR_UP		(0x48)
+#define KEY_CURSOR_DOWN		(0x50)
+#define KEY_CURSOR_RIGHT	(0x4D)
+#define KEY_CURSOR_LEFT		(0x4B)
+#define KEY_INSERT			(0x52)
+#define KEY_DELETE			(0x53)
+
+#define KEY_BACKSPACE		0xE
 
 /**
  * 键盘扫描码表单元类型
@@ -36,6 +77,10 @@ typedef struct _kbd_state_t {
     int caps_lock : 1;			// 大写状态
     int lshift_press : 1;       // 左shift按下
     int rshift_press : 1;       // 右shift按下
+    int ralt_press : 1;          // alt按下
+    int lalt_press : 1;          // alt按下
+    int lctrl_press : 1;         // ctrl键按下
+    int rctrl_press : 1;         // ctrl键按下
 }kbd_state_t;
 
 void kbd_init(void);
