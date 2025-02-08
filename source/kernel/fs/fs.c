@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include "tools/log.h"
 #include "dev/console.h"
+#include "fs/file.h"
 
 #define TEMP_FILE_ID		100
 #define TEMP_ADDR        	(8*1024*1024)      // 在0x800000处缓存原始
@@ -41,6 +42,13 @@ static void read_disk(int sector, int sector_count, uint8_t * buf) {
 			*data_buf++ = inw(0x1F0);
 		}
 	}
+}
+
+/**
+ * @brief 文件系统初始化
+ */
+void fs_init (void) {
+    file_table_init();
 }
 
 /**

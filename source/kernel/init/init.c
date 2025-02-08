@@ -13,7 +13,7 @@
 #include "core/memory.h"
 #include "dev/console.h"
 #include "dev/kbd.h"
-
+#include "fs/fs.h"
 
 void kernel_init(boot_info_t* boot_info) {
     // ASSERT(boot_info->ram_region_count != 0);
@@ -22,6 +22,7 @@ void kernel_init(boot_info_t* boot_info) {
     irq_init();
     memory_init(boot_info);
     log_init();
+    fs_init();
     timer_init();
 
     task_manager_init();
