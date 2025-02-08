@@ -26,7 +26,7 @@ void kernel_init(boot_info_t* boot_info) {
     timer_init();
 
     task_manager_init();
-    kbd_init();
+    // kbd_init();
 }
 
 // static task_t init_task;
