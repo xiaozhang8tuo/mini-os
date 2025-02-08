@@ -267,6 +267,14 @@ void do_handler_kbd(exception_frame_t *frame) {
  * 键盘硬件初始化
  */
 void kbd_init(void) {
-    irq_install(IRQ1_KEYBOARD, (irq_handler_t)exception_handler_kbd);
-    irq_enable(IRQ1_KEYBOARD);
+    static int inited = 0;
+
+    if (!inited) {
+        update_led_status();
+
+        irq_install(IRQ1_KEYBOARD, (irq_handler_t)exception_handler_kbd);
+        irq_enable(IRQ1_KEYBOARD);
+
+        inited = 1;
+    }
 }

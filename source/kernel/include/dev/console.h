@@ -1,6 +1,7 @@
 #ifndef CONSOLE_H
 #define CONSOLE_H
 #include "comm/types.h"
+#include "dev/tty.h"
 
 // https://wiki.osdev.org/Printing_To_Screen
 #define CONSOLE_VIDEO_BASE			0xb8000		// 控制台显存起始地址,共32KB
@@ -66,8 +67,8 @@ typedef struct _console_t {
     int curr_param_index;
 }console_t;
 
-int console_init (void);
-int console_write (int dev, char * data, int size);
+int console_init (int idx);
+int console_write (tty_t * tty);
 void console_close (int dev);
 
 #endif /* SRC_UI_TTY_WIDGET_H_ */

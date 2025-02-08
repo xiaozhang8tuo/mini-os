@@ -190,26 +190,28 @@ void restore_cursor(console_t * console) {
 /**
  * 初始化控制台及键盘
  */
-int console_init (void) {
-    for (int i = 0; i < CONSOLE_NR; i++) {
-        console_t *console = console_buf + i;
+int console_init (int idx) {
+    console_t *console = console_buf + idx;
 
-        console->disp_base = (disp_char_t *) CONSOLE_DISP_ADDR;
-        console->display_cols = CONSOLE_COL_MAX;
-        console->display_rows = CONSOLE_ROW_MAX;
+    console->display_cols = CONSOLE_COL_MAX;
+    console->display_rows = CONSOLE_ROW_MAX;
+    console->disp_base = (disp_char_t *) CONSOLE_DISP_ADDR + idx * console->display_cols * console->display_rows;
 
+    console->foreground = COLOR_White;
+    console->background = COLOR_Black;
+    if (idx == 0) {
         int cursor_pos = read_cursor_pos();
         console->cursor_row = cursor_pos / console->display_cols;
         console->cursor_col = cursor_pos % console->display_cols;
-
-        console->old_cursor_row = console->cursor_row;
-        console->old_cursor_col = console->cursor_col;
-
-        console->foreground = COLOR_White;
-        console->background = COLOR_Black;
-        // clear_display(console);
+    } else {
+        console->cursor_row = 0;
+        console->cursor_col = 0;    
+        clear_display(console);
+        update_cursor_pos(console);
     }
 
+    console->old_cursor_row = console->cursor_row;
+    console->old_cursor_col = console->cursor_col;
 	return 0;
 }
 
@@ -235,7 +237,7 @@ static void write_normal (console_t * console, char c) {
             move_to_col0(console);
             break;
         case '\n':  // 暂时这样处理
-            move_to_col0(console);
+            // move_to_col0(console);
             move_next_line(console);
             break;
             // 普通字符显示
@@ -406,12 +408,21 @@ static void write_esc_square (console_t * console, char c) {
  * 实现pwdget作为tty的输出
  * 可能有多个进程在写，注意保护
  */
-int console_write (int dev, char * data, int size) {
-	console_t * console = console_buf + dev;
+int console_write (tty_t * tty) {
+	console_t * console = console_buf + tty->console_idx;
 
-    int len;
-	for (len = 0; len < size; len++){
-        char c = *data++;
+    int len = 0;
+    do {
+        char c;
+
+        // 取字节数据
+        int err = tty_fifo_get(&tty->ofifo, &c);
+        if (err < 0) {
+            break;
+        }
+        sem_notify(&tty->osem);
+
+        // 显示出来
         switch (console->write_state) {
             case CONSOLE_WRITE_NORMAL: {
                 write_normal(console, c);
@@ -424,7 +435,9 @@ int console_write (int dev, char * data, int size) {
                 write_esc_square(console, c);
                 break;
         }
-    }
+        len++;
+    }while (1);
+
     update_cursor_pos(console);
     return len;
 }

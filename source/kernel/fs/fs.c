@@ -76,7 +76,13 @@ int sys_write(int file, char *ptr, int len) {
     // ptr[len] = '\0';
     // log_printf("%s", ptr);
 
-    console_write(0, ptr, len);
+    //console_write(0, ptr, len);
+    // 注意，这里用logprintf打印会出错，因为传过来的ptr并非以\0结构，而是由len控制
+    // 因此，使用log_printf打印会额外输出一些东西
+    char buf[128];
+    kernel_memcpy(buf, ptr, len);
+    buf[len] = '\0';
+    log_printf("%s", buf);
     return len;
 }
 
