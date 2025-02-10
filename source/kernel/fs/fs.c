@@ -131,7 +131,15 @@ int sys_read(int file, char *ptr, int len) {
         kernel_memcpy(ptr, temp_pos, len);
         temp_pos += len;
         return len;
-    }
+    } else {
+		file_t * p_file = task_file(file);
+		if (!p_file) {
+			log_printf("file not opened");
+			return -1;
+		}
+
+		return dev_read(p_file->dev_id, 0, ptr, len);
+	}
     return -1;
 }
 

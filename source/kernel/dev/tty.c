@@ -75,8 +75,11 @@ int tty_open (device_t * dev)  {
 
 	tty_t * tty = tty_devs + idx;
 	tty_fifo_init(&tty->ofifo, tty->obuf, TTY_OBUF_SIZE);
-	sem_init(&tty->osem, TTY_OBUF_SIZE);
+	sem_init(&tty->osem, TTY_OBUF_SIZE); // 这个代表控制台输出buffer中空余的数量，只要有就需要控制台写
 	tty_fifo_init(&tty->ififo, tty->ibuf, TTY_IBUF_SIZE);
+	sem_init(&tty->isem, 0); // 这个代表控制台输入buffer中待处理的数量，只要有就说明有输入指令待处理
+
+	tty->iflags = TTY_INLCR | TTY_IECHO;
 	tty->oflags = TTY_OCRLF;
 	tty->console_idx = idx;
 
@@ -89,7 +92,55 @@ int tty_open (device_t * dev)  {
  * @brief 从tty读取数据
  */
 int tty_read (device_t * dev, int addr, char * buf, int size) {
-	return size;
+	if (size < 0) {
+		return -1;
+	}
+
+	tty_t * tty = get_tty(dev);
+	char * pbuf = buf;
+	int len = 0;
+
+	// 不断读取，直到遇到文件结束符或者行结束符
+	while (len < size) {
+		// 等待可用的数据
+		sem_wait(&tty->isem);
+
+		// 取出数据
+		char ch;
+		tty_fifo_get(&tty->ififo, &ch);
+		switch (ch) {
+			case ASCII_DEL:
+				if (len == 0) {
+					continue;
+				}
+				len--;
+				pbuf--;
+				break;
+			case '\n':
+				if ((tty->iflags & TTY_INLCR) && (len < size - 1)) {	// \n变成\r\n
+					*pbuf++ = '\r';
+					len++;
+				}
+				*pbuf++ = '\n';
+				len++;
+				break;
+			default:
+				*pbuf++ = ch;
+				len++;
+				break;
+		}
+
+		if (tty->iflags & TTY_IECHO) {
+		    tty_write(dev, 0, &ch, 1);
+		}
+
+		// 遇到一行结束，也直接跳出
+		if ((ch == '\r') || (ch == '\n')) {
+			break;
+		}
+	}
+
+	return len;
 }
 
 /**
@@ -138,6 +189,21 @@ int tty_write (device_t * dev, int addr, char * buf, int size) {
  */
 int tty_control (device_t * dev, int cmd, int arg0, int arg1) {
 	
+}
+
+/**
+ * @brief 输入tty字符
+ */
+void tty_in (int idx, char ch) {
+	tty_t * tty = tty_devs + idx;
+	// 辅助队列要有空闲空间可代写入
+	if (sem_count(&tty->isem) >= TTY_IBUF_SIZE) {
+		return; // 待处理的太多了
+	}
+
+	// 写入辅助队列，通知数据到达
+	tty_fifo_put(&tty->ififo, ch);
+	sem_notify(&tty->isem);
 }
 
 /**

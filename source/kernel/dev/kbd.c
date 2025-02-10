@@ -3,6 +3,7 @@
 #include "dev/kbd.h"
 #include "tools/log.h"
 #include "tools/klib.h"
+#include "dev/tty.h"
 
 static kbd_state_t kbd_state;	// 键盘状态
 
@@ -25,7 +26,8 @@ static const key_map_t map_table[256] = {
         [0x0B] = {'0', ')'},
         [0x0C] = {'-', '_'},
         [0x0D] = {'=', '+'},
-        [0x0E] = {'\b', '\b'},// 删除键
+        // [0x0E] = {'\b', '\b'},// 删除键
+        [0x0E] = {ASCII_DEL, ASCII_DEL},
         [0x0F] = {'\t', '\t'},
         [0x10] = {'q', 'Q'},
         [0x11] = {'w', 'W'},
@@ -189,7 +191,8 @@ static void do_normal_key (uint8_t raw_code) {
             }
 
             // 最后，不管是否是控制字符，都会被写入
-            log_printf("key=%c", key);
+            // log_printf("key=%c", key);
+            tty_in(0, key);
         }
         break;
     }

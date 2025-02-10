@@ -1,6 +1,7 @@
 #include "lib_syscall.h"
 #include <stdio.h>
 
+char cmd_buf[256];
 int main (int argc, char **argv) {
 #if 0
     sbrk(0);
@@ -38,6 +39,8 @@ int main (int argc, char **argv) {
     // yield();
 
     for (;;) {
+        gets(cmd_buf);
+        puts(cmd_buf);
         // print_msg("pid=%d", getpid());
         printf("pid=%d\n", getpid());
         msleep(1000);
