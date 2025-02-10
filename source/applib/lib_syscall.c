@@ -139,3 +139,10 @@ void * sbrk(ptrdiff_t incr) {
     args.arg0 = (int)incr;
     return (void *)sys_call(&args);
 }
+
+int dup (int file) {
+    syscall_args_t args;
+    args.id = SYS_dup;
+    args.arg0 = file;
+    return sys_call(&args);
+}

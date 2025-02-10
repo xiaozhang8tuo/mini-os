@@ -124,6 +124,32 @@ sys_open_failed:
 }
 
 /**
+ * 复制一个文件描述符
+ */
+int sys_dup (int file) {
+	// 超出进程所能打开的全部，退出
+	if ((file < 0) || (file >= TASK_OFILE_NR)) {
+        log_printf("file(%d) is not valid.", file);
+		return -1;
+	}
+
+	file_t * p_file = task_file(file);
+	if (!p_file) {
+		log_printf("file not opened");
+		return -1;
+	}
+
+	int fd = task_alloc_fd(p_file);	// 新fd指向同一描述符
+	if (fd >= 0) {
+		p_file->ref++;		// 增加引用
+		return fd;
+	}
+
+	log_printf("No task file avaliable");
+    return -1;
+}
+
+/**
  * 读取文件api
  */
 int sys_read(int file, char *ptr, int len) {
@@ -147,7 +173,6 @@ int sys_read(int file, char *ptr, int len) {
  * 写文件
  */
 int sys_write(int file, char *ptr, int len) {
-	file = 0;		// 临时使用
 	file_t * p_file = task_file(file);
 	if (!p_file) {
 		log_printf("file not opened");
