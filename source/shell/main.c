@@ -2,6 +2,7 @@
 #include <stdio.h>
 
 int main (int argc, char **argv) {
+#if 0
     sbrk(0);
     sbrk(100);
     sbrk(200);
@@ -21,6 +22,8 @@ int main (int argc, char **argv) {
     printf("\033[32;25;39m123\n");  // ESC [pn m, Hello,world红色，其余绿色  
 
     printf("\033[2J\n");   // clear screen
+#endif
+    open("tty:0", 0);
 
     printf("hello from shell\n");
     puts("TEST!");
@@ -29,10 +32,10 @@ int main (int argc, char **argv) {
         printf("arg: %s\n", (int)argv[i]);
     }
 
-    // 创建一个自己的副本
-    fork();
+    // // 创建一个自己的副本
+    // fork();
 
-    yield();
+    // yield();
 
     for (;;) {
         // print_msg("pid=%d", getpid());
