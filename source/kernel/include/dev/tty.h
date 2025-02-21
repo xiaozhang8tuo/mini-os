@@ -37,6 +37,7 @@ typedef struct _tty_t {
 	int console_idx;				// 控制台索引号
 }tty_t;
 
-void tty_in (int idx, char ch);
+void tty_select (int tty);
+void tty_in (char ch);
 
 #endif /* TTY_H */

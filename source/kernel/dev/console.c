@@ -3,10 +3,13 @@
  */
 #include "dev/console.h"
 #include "comm/cpu_instr.h"
+#include "dev/tty.h"
+
 #define CONSOLE_NR          1           // 控制台的数量
 
 static console_t console_buf[CONSOLE_NR];
 
+static void show_char(console_t * console, char c);
 
 /**
  * @brief 读取当前光标的位置
@@ -25,12 +28,35 @@ static int read_cursor_pos (void) {
  * @brief 更新光标的位置
  */
 static void update_cursor_pos (console_t * console) {
-	uint16_t pos = console->cursor_row *  console->display_cols + console->cursor_col;
+	uint16_t pos = (console - console_buf) * (console->display_cols * console->display_rows);
+    pos += console->cursor_row *  console->display_cols + console->cursor_col;
 
 	outb(0x3D4, 0x0F);		// 写低地址
 	outb(0x3D5, (uint8_t) (pos & 0xFF));
 	outb(0x3D4, 0x0E);		// 写高地址
 	outb(0x3D5, (uint8_t) ((pos >> 8) & 0xFF));
+}
+
+void console_select(int idx) {
+    console_t * console = console_buf + idx;
+    if (console->disp_base == 0) {
+        // 可能没有初始化，先初始化一下
+        console_init(idx);
+    }
+
+	uint16_t pos = idx * console->display_cols * console->display_rows;
+
+	outb(0x3D4, 0xC);		// 写高地址
+	outb(0x3D5, (uint8_t) ((pos >> 8) & 0xFF));
+	outb(0x3D4, 0xD);		// 写低地址
+	outb(0x3D5, (uint8_t) (pos & 0xFF));
+
+    // 更新光标到当前屏幕
+    update_cursor_pos(console);
+
+    // 测试代码
+    char num = idx + '0';
+    show_char(console, num);
 }
 
 /**
@@ -100,7 +126,7 @@ static void move_forward (console_t * console, int n) {
 /**
  * 在当前位置显示一个字符
  */
-static void show_char(console_t * console, char c) {
+void show_char(console_t * console, char c) {
     int offset = console->cursor_col + console->cursor_row * console->display_cols;
 
     disp_char_t * p = console->disp_base + offset;

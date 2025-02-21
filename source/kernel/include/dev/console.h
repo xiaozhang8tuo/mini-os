@@ -70,5 +70,6 @@ typedef struct _console_t {
 int console_init (int idx);
 int console_write (tty_t * tty);
 void console_close (int dev);
+void console_select(int idx);
 
 #endif /* SRC_UI_TTY_WIDGET_H_ */

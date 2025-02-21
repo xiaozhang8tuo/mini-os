@@ -5,6 +5,8 @@
 #include "tools/log.h"
 
 static tty_t tty_devs[TTY_NR];
+static int curr_tty = 0;
+
 
 /**
  * @brief FIFO初始化
@@ -194,8 +196,9 @@ int tty_control (device_t * dev, int cmd, int arg0, int arg1) {
 /**
  * @brief 输入tty字符
  */
-void tty_in (int idx, char ch) {
-	tty_t * tty = tty_devs + idx;
+void tty_in (char ch) {
+	tty_t * tty = tty_devs + curr_tty;
+
 	// 辅助队列要有空闲空间可代写入
 	if (sem_count(&tty->isem) >= TTY_IBUF_SIZE) {
 		return; // 待处理的太多了
@@ -204,6 +207,16 @@ void tty_in (int idx, char ch) {
 	// 写入辅助队列，通知数据到达
 	tty_fifo_put(&tty->ififo, ch);
 	sem_notify(&tty->isem);
+}
+
+/**
+ * @brief 选择tty
+ */
+void tty_select (int tty) {
+	if (tty != curr_tty) {
+		console_select(tty);
+		curr_tty = tty;
+	}
 }
 
 /**
