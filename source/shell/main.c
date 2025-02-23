@@ -24,7 +24,7 @@ int main (int argc, char **argv) {
 
     printf("\033[2J\n");   // clear screen
 #endif
-    open("tty:0", 0);// 标准输入
+	open(argv[0], 0);
     dup(0);     // 标准输出
     dup(0);     // 标准错误输出
 

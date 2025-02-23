@@ -43,3 +43,6 @@ os_elf.txt
 **/start.s
 /source_tmp
 /c*
+
+/source_new
+/source_old

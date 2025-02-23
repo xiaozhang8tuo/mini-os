@@ -4,12 +4,13 @@
 #include "dev/console.h"
 #include "comm/cpu_instr.h"
 #include "dev/tty.h"
+#include "cpu/irq.h"
 
-#define CONSOLE_NR          1           // 控制台的数量
+#define CONSOLE_NR          8           // 控制台的数量
 
 static console_t console_buf[CONSOLE_NR];
 
-static void show_char(console_t * console, char c);
+static int curr_console_idx = 0;
 
 /**
  * @brief 读取当前光标的位置
@@ -17,10 +18,12 @@ static void show_char(console_t * console, char c);
 static int read_cursor_pos (void) {
     int pos;
 
+    irq_state_t state = irq_enter_protection();
  	outb(0x3D4, 0x0F);		// 写低地址
 	pos = inb(0x3D5);
 	outb(0x3D4, 0x0E);		// 写高地址
 	pos |= inb(0x3D5) << 8;   
+	irq_leave_protection(state);
     return pos;
 }
 
@@ -31,10 +34,12 @@ static void update_cursor_pos (console_t * console) {
 	uint16_t pos = (console - console_buf) * (console->display_cols * console->display_rows);
     pos += console->cursor_row *  console->display_cols + console->cursor_col;
 
+    irq_state_t state = irq_enter_protection();
 	outb(0x3D4, 0x0F);		// 写低地址
 	outb(0x3D5, (uint8_t) (pos & 0xFF));
 	outb(0x3D4, 0x0E);		// 写高地址
 	outb(0x3D5, (uint8_t) ((pos >> 8) & 0xFF));
+	irq_leave_protection(state);
 }
 
 void console_select(int idx) {
@@ -51,12 +56,9 @@ void console_select(int idx) {
 	outb(0x3D4, 0xD);		// 写低地址
 	outb(0x3D5, (uint8_t) (pos & 0xFF));
 
+    curr_console_idx = idx;
     // 更新光标到当前屏幕
     update_cursor_pos(console);
-
-    // 测试代码
-    char num = idx + '0';
-    show_char(console, num);
 }
 
 /**
@@ -126,7 +128,7 @@ static void move_forward (console_t * console, int n) {
 /**
  * 在当前位置显示一个字符
  */
-void show_char(console_t * console, char c) {
+static void show_char(console_t * console, char c) {
     int offset = console->cursor_col + console->cursor_row * console->display_cols;
 
     disp_char_t * p = console->disp_base + offset;
@@ -233,7 +235,6 @@ int console_init (int idx) {
         console->cursor_row = 0;
         console->cursor_col = 0;    
         clear_display(console);
-        update_cursor_pos(console);
     }
 
     console->old_cursor_row = console->cursor_row;
@@ -464,7 +465,9 @@ int console_write (tty_t * tty) {
         len++;
     }while (1);
 
-    update_cursor_pos(console);
+    if (tty->console_idx == curr_console_idx) {
+        update_cursor_pos(console);
+    }
     return len;
 }
 

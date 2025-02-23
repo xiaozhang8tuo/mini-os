@@ -10,7 +10,7 @@
 #define MEM_EXT_START (1024*1024)
 #define MEM_PAGE_SIZE 4096
 #define MEMORY_TASK_BASE (0x80000000)        // 进程起始线性地址空间
-#define MEM_EXT_END (12*1024*1024 - 1)
+#define MEM_EXT_END (128*1024*1024 - 1)
 
 #define MEM_TASK_STACK_TOP          (0xE0000000)        // 初始栈的位置  
 #define MEM_TASK_STACK_SIZE         (MEM_PAGE_SIZE * 500)   // 初始500KB栈
