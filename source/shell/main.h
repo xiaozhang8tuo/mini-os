@@ -2,6 +2,7 @@
 #define CMD_H
 
 #define CLI_INPUT_SIZE              1024            // 输入缓存区
+#define	CLI_MAX_ARG_COUNT		    10			    // 最大接收的参数数量
 
 /**
  * 命令列表
