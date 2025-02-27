@@ -10,7 +10,7 @@
 
 static console_t console_buf[CONSOLE_NR];
 
-static int curr_console_idx = 0;
+// static int curr_console_idx = 0;
 
 /**
  * @brief 读取当前光标的位置
@@ -56,7 +56,7 @@ void console_select(int idx) {
 	outb(0x3D4, 0xD);		// 写低地址
 	outb(0x3D5, (uint8_t) (pos & 0xFF));
 
-    curr_console_idx = idx;
+    // curr_console_idx = idx;
     // 更新光标到当前屏幕
     update_cursor_pos(console);
 }
@@ -465,9 +465,9 @@ int console_write (tty_t * tty) {
         len++;
     }while (1);
 
-    if (tty->console_idx == curr_console_idx) {
-        update_cursor_pos(console);
-    }
+    // if (tty->console_idx == curr_console_idx) {
+    update_cursor_pos(console);
+    // }
     return len;
 }
 
