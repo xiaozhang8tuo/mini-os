@@ -18,6 +18,7 @@ int print_msg(char * fmt, int arg);
 int fork();
 int execve(const char *name, char * const *argv, char * const *env);
 int yield (void);
+void _exit(int status);
 
 
 int open(const char *name, int flags, ...);

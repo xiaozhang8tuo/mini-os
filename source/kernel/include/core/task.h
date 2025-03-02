@@ -25,11 +25,13 @@ typedef struct _task_t {
         TASK_SLEEP,
         TASK_READY,
         TASK_WAITTING,
+        TASK_ZOMBIE,
     }state;
 
     int sleep_ticks;
     int time_ticks;
     int slice_ticks;
+    int status;				// 进程执行结果
 
     file_t * file_table[TASK_OFILE_NR];	// 任务最多打开的文件数量
 
@@ -77,6 +79,8 @@ void task_timer_tick(void);
 file_t * task_file (int fd);
 int task_alloc_fd (file_t * file);
 void task_remove_fd (int fd);
+void sys_exit(int status);
+
 
 void task_set_sleep(task_t* task, uint32_t ticks);
 void task_set_wakeup(task_t* task);

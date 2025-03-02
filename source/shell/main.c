@@ -93,6 +93,16 @@ static int do_echo (int argc, char ** argv) {
     return 0;
 }
 
+/**
+ * 程序退出命令
+ */
+static int do_exit (int argc, char ** argv) {
+    exit(0);
+    return 0;
+}
+
+
+
 // 命令列表
 static const cli_cmd_t cmd_list[] = {
     {
@@ -110,6 +120,11 @@ static const cli_cmd_t cmd_list[] = {
 		.useage = "echo [-n count] msg  -- echo something",
 		.do_func = do_echo,
 	},
+    {
+        .name = "quit",
+        .useage = "quit from shell",
+        .do_func = do_exit,
+    }
 };
 
 /**

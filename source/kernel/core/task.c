@@ -691,3 +691,29 @@ exec_failed:    // 必要的资源释放
 
     return -1;
 }
+
+/**
+ * @brief 退出进程
+ */
+void sys_exit(int status) {
+    task_t * curr_task = task_current();
+
+    // 关闭所有已经打开的文件, 标准输入输出库会由newlib自行关闭，但这里仍然再处理下
+    for (int fd = 0; fd < TASK_OFILE_NR; fd++) {
+        file_t * file = curr_task->file_table[fd];
+        if (file) {
+            sys_close(fd);
+            curr_task->file_table[fd] = (file_t *)0;
+        }
+    }
+
+    irq_state_t state = irq_enter_protection();
+
+    // 保存返回值，进入僵尸状态
+    curr_task->status = status;
+    curr_task->state = TASK_ZOMBIE;
+    task_set_block(curr_task);
+    task_dispatch();
+
+    irq_leave_protection(state);
+}
