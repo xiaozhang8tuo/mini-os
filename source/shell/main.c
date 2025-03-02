@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <string.h>
 #include "main.h"
+#include <getopt.h>
+#include <stdlib.h>
+
 
 static cli_t cli;
 static const char * promot = "sh >>";       // 命令行提示符
@@ -27,6 +30,69 @@ static int do_help(int argc, char **argv) {
     return 0;
 }
 
+/**
+ * 清屏命令
+ */
+static int do_clear (int argc, char ** argv) {
+    printf("%s", ESC_CLEAR_SCREEN);
+    printf("%s", ESC_MOVE_CURSOR(0, 0));
+    return 0;
+}
+
+/**
+ * 回显命令
+ */
+static int do_echo (int argc, char ** argv) {
+    // 只有一个参数，需要先手动输入，再输出
+    if (argc == 1) {
+        char msg_buf[128];
+
+        fgets(msg_buf, sizeof(msg_buf), stdin);
+        msg_buf[sizeof(msg_buf) - 1] = '\0';
+        puts(msg_buf);
+        return 0;
+    }
+
+    // https://www.cnblogs.com/yinghao-liu/p/7123622.html
+    // optind是下一个要处理的元素在argv中的索引
+    // 当没有选项时，变为argv第一个不是选项元素的索引。
+    int count = 1;    // 缺省只打印一次
+    int ch;
+    while ((ch = getopt(argc, argv, "n:h")) != -1) {
+        switch (ch) {
+            case 'h':
+                puts("echo echo any message");
+                puts("Usage: echo [-n count] msg");
+                optind = 1;        // getopt需要多次调用，需要重置
+                return 0;
+            case 'n':
+                count = atoi(optarg);
+                break;
+            case '?':
+                if (optarg) {
+                    fprintf(stderr, "Unknown option: -%s\n", optarg);
+                }
+                optind = 1;        // getopt需要多次调用，需要重置
+                return -1;
+        }
+    }
+
+    // 索引已经超过了最后一个参数的位置，意味着没有传入要发送的信息
+    if (optind > argc - 1) {
+        fprintf(stderr, "Message is empty \n");
+        optind = 1;        // getopt需要多次调用，需要重置
+        return -1;
+    }
+
+    // 循环打印消息
+    char * msg = argv[optind];
+    for (int i = 0; i < count; i++) {
+        puts(msg);
+    }
+    optind = 1;        // getopt需要多次调用，需要重置
+    return 0;
+}
+
 // 命令列表
 static const cli_cmd_t cmd_list[] = {
     {
@@ -34,6 +100,16 @@ static const cli_cmd_t cmd_list[] = {
 		.useage = "help -- list support command",
 		.do_func = do_help,
     },
+    {
+        .name = "clear",
+		.useage = "clear -- clear the screen",
+		.do_func = do_clear,
+    },
+	{
+		.name = "echo",
+		.useage = "echo [-n count] msg  -- echo something",
+		.do_func = do_echo,
+	},
 };
 
 /**
@@ -69,7 +145,7 @@ static const cli_cmd_t * find_builtin (const char * name) {
 static void run_builtin (const cli_cmd_t * cmd, int argc, char ** argv) {
     int ret = cmd->do_func(argc, argv);
     if (ret < 0) {
-        fprintf(stderr,"error: %d\n", ret);
+        fprintf(stderr,ESC_COLOR_ERROR"error: %d\n"ESC_COLOR_DEFAULT, ret);
     }
 }
 
@@ -132,7 +208,7 @@ int main (int argc, char **argv) {
         // }
 
         // 找不到命令，提示错误
-        fprintf(stderr, "Unknown command: %s\n", cli.curr_input);
+        fprintf(stderr, ESC_COLOR_ERROR"Unknown command: %s\n"ESC_COLOR_DEFAULT, cli.curr_input);
     }
 
     return 0;
