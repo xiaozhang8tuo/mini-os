@@ -2,6 +2,7 @@
 #define CONSOLE_H
 #include "comm/types.h"
 #include "dev/tty.h"
+#include "ipc/mutex.h"
 
 // https://wiki.osdev.org/Printing_To_Screen
 #define CONSOLE_VIDEO_BASE			0xb8000		// 控制台显存起始地址,共32KB
@@ -65,6 +66,8 @@ typedef struct _console_t {
 
     int esc_param[ESC_PARAM_MAX];	// ESC [ ;;参数数量
     int curr_param_index;
+
+    mutex_t mutex;                  // 写互斥锁
 }console_t;
 
 int console_init (int idx);

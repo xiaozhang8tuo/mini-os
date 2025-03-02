@@ -388,6 +388,21 @@ static void free_task (task_t * task) {
 }
 
 /**
+ * @brief 从当前进程中拷贝已经打开的文件列表
+ */
+static void copy_opened_files(task_t * child_task) {
+    task_t * parent = task_current();
+
+    for (int i = 0; i < TASK_OFILE_NR; i++) {
+        file_t * file = parent->file_table[i];
+        if (file) {
+            file_inc_ref(file);
+            child_task->file_table[i] = parent->file_table[i];
+        }
+    }
+}
+
+/**
  * 创建进程的副本
  */
 int sys_fork (void) {
@@ -408,6 +423,9 @@ int sys_fork (void) {
     if (err < 0) {
         goto fork_failed;
     }
+
+    // 拷贝打开的文件
+    copy_opened_files(child_task);
 
     // 从父进程的栈中取部分状态，然后写入tss。
     // 注意检查esp, eip等是否在用户空间范围内，不然会造成page_fault
