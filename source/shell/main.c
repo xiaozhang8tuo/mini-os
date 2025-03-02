@@ -164,6 +164,35 @@ static void run_builtin (const cli_cmd_t * cmd, int argc, char ** argv) {
     }
 }
 
+/**
+ * 试图运行当前文件
+ */
+static void run_exec_file (const char * path, int argc, char ** argv) {
+    int pid = fork();
+    if (pid < 0) {
+        fprintf(stderr, "fork failed: %s", path);
+    } else if (pid == 0) {
+        // 以下供测试exit使用
+        for (int i = 0; i < argc; i++) {
+            msleep(1000);
+            printf("arg %d = %s\n", i, argv[i]);
+        }
+        exit(-1);
+
+        // 子进程
+        // int err = execve(path, argv, (char * const *)0);
+        // if (err < 0) {
+        //     fprintf(stderr, "exec failed: %s", path);
+        // }
+        // exit(-1);
+    } else {
+		// 等待子进程执行完毕
+        int status;
+        int pid = wait(&status);
+        fprintf(stderr, "cmd %s result: %d, pid = %d\n", path, status, pid);
+    }
+}
+
 
 int main (int argc, char **argv) {
 	open(argv[0], 0);
@@ -213,7 +242,7 @@ int main (int argc, char **argv) {
         }
 
         // 测试程序，运行虚拟的程序
-        //run_exec_file("", argc, argv);
+        run_exec_file("", argc, argv);
 
         // 试图作为外部命令执行。只检查文件是否存在，不考虑是否可执行
         // const char * path = find_exec_path(argv[0]);

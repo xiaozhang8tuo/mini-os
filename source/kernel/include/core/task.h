@@ -24,7 +24,7 @@ typedef struct _task_t {
         TASK_RUNNING,
         TASK_SLEEP,
         TASK_READY,
-        TASK_WAITTING,
+        TASK_WAITING,
         TASK_ZOMBIE,
     }state;
 
@@ -80,7 +80,7 @@ file_t * task_file (int fd);
 int task_alloc_fd (file_t * file);
 void task_remove_fd (int fd);
 void sys_exit(int status);
-
+int sys_wait(int* status);
 
 void task_set_sleep(task_t* task, uint32_t ticks);
 void task_set_wakeup(task_t* task);
