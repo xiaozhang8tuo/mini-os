@@ -3,6 +3,9 @@
 
 #include <sys/stat.h>
 #include "file.h"
+#include "tools/list.h"
+#include "ipc/mutex.h"
+
 
 struct _fs_t;
 
@@ -20,10 +23,24 @@ typedef struct _fs_op_t {
     int (*stat)(file_t * file, struct stat *st);
 }fs_op_t;
 
-typedef struct _fs_t {
-    fs_op_t * op;              // 文件系统操作接口
-}fs_t;
+#define FS_MOUNTP_SIZE      512
 
+// 文件系统类型
+typedef enum _fs_type_t {
+    FS_DEVFS,
+}fs_type_t;
+
+typedef struct _fs_t {
+    char mount_point[FS_MOUNTP_SIZE];       // 挂载点路径长
+    fs_type_t type;              // 文件系统类型
+
+    fs_op_t * op;              // 文件系统操作接口
+    void * data;                // 文件系统的操作数据
+    int dev_id;                 // 所属的设备
+
+    list_node_t node;           // 下一结点
+    mutex_t * mutex;              // 文件系统操作互斥信号量
+}fs_t;
 
 void fs_init (void);
 

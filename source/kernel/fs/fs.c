@@ -9,6 +9,14 @@
 #include "fs/file.h"
 #include "dev/dev.h"
 
+#define FS_TABLE_SIZE		10		// 文件系统表数量
+
+static list_t mounted_list;			// 已挂载的文件系统
+static list_t free_list;				// 空闲fs列表
+static fs_t fs_tbl[FS_TABLE_SIZE];		// 空闲文件系统列表大小
+
+extern fs_op_t devfs_op;
+
 #define TEMP_FILE_ID		100
 #define TEMP_ADDR        	(8*1024*1024)      // 在0x800000处缓存原始
 
@@ -46,10 +54,94 @@ static void read_disk(int sector, int sector_count, uint8_t * buf) {
 }
 
 /**
+ * @brief 获取指定文件系统的操作接口
+ */
+static fs_op_t * get_fs_op (fs_type_t type, int major) {
+	switch (type) {
+	case FS_DEVFS:
+		return &devfs_op;
+	default:
+		return (fs_op_t *)0;
+	}
+}
+
+/**
+ * @brief 挂载文件系统
+ */
+static fs_t * mount (fs_type_t type, char * mount_point, int dev_major, int dev_minor) {
+	fs_t * fs = (fs_t *)0;
+
+	log_printf("mount file system, name: %s, dev: %x", mount_point, dev_major);
+
+	// 遍历，查找是否已经有挂载
+ 	list_node_t * curr = list_first(&mounted_list);
+	while (curr) {
+		fs_t * fs = list_node_parent(curr, fs_t, node);
+		if (kernel_strncmp(fs->mount_point, mount_point, FS_MOUNTP_SIZE) == 0) {
+			log_printf("fs alreay mounted.");
+			goto mount_failed;
+		}
+		curr = list_node_next(curr);
+	}
+
+	// 分配新的fs结构
+	list_node_t * free_node = list_remove_first(&free_list);
+	if (!free_node) {
+		log_printf("no free fs, mount failed.");
+		goto mount_failed;
+	}
+	fs = list_node_parent(free_node, fs_t, node);
+
+	// 检查挂载的文件系统类型：不检查实际
+	fs_op_t * op = get_fs_op(type, dev_major);
+	if (!op) {
+		log_printf("unsupported fs type: %d", type);
+		goto mount_failed;
+	}
+
+	// 给定数据一些缺省的值
+	kernel_memset(fs, 0, sizeof(fs_t));
+	kernel_strncpy(fs->mount_point, mount_point, FS_MOUNTP_SIZE);
+	fs->op = op;
+	fs->mutex = (mutex_t *)0;
+
+	// 挂载文件系统
+	if (op->mount(fs, dev_major, dev_minor) < 0) {
+		log_printf("mount fs %s failed", mount_point);
+		goto mount_failed;
+	}
+	list_insert_last(&mounted_list, &fs->node);
+	return fs;
+mount_failed:
+	if (fs) {
+		// 回收fs
+		list_insert_first(&free_list, &fs->node);
+	}
+	return (fs_t *)0;
+}
+
+/**
+ * @brief 初始化挂载列表
+ */
+static void mount_list_init (void) {
+	list_init(&free_list);
+	for (int i = 0; i < FS_TABLE_SIZE; i++) {
+		list_insert_first(&free_list, &fs_tbl[i].node);
+	}
+	list_init(&mounted_list);
+}
+
+
+/**
  * @brief 文件系统初始化
  */
 void fs_init (void) {
+	mount_list_init();
     file_table_init();
+
+	// 挂载设备文件系统，待后续完成。挂载点名称可随意
+	fs_t * fs = mount(FS_DEVFS, "/dev", 0, 0);
+	ASSERT(fs != (fs_t *)0);
 }
 
 /**
