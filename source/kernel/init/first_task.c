@@ -31,7 +31,7 @@ int first_task_main (void) {
     }
 #endif
 
-    for (int i = 0; i < TTY_NR; i++) {
+    for (int i = 0; i < 1; i++) {
         int pid = fork();
         if (pid < 0) {
             print_msg("create shell proc failed", 0);
