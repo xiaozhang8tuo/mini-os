@@ -43,6 +43,8 @@ typedef struct _fs_t {
 }fs_t;
 
 void fs_init (void);
+int path_to_num (const char * path, int * num);
+const char * path_next_child (const char * path);
 
 int sys_open(const char *name, int flags, ...);
 int sys_read(int file, char *ptr, int len);

@@ -156,13 +156,37 @@ static int is_path_valid (const char * path) {
 }
 
 /**
- * 打开文件
+ * @brief 转换目录为数字
  */
+int path_to_num (const char * path, int * num) {
+	int n = 0;
+
+	const char * c = path;
+	while (*c && *c != '/') {
+		n = n * 10 + *c - '0';
+		c++;
+	}
+	*num = n;
+	return 0;
+}
+
+/**
+ * @brief 获取下一级子目录
+ */
+const char * path_next_child (const char * path) {
+   const char * c = path;
+
+    while (*c && (*c++ == '/')) {}
+    while (*c && (*c++ != '/')) {}
+    return *c ? c : (const char *)0;
+}
+
+
 /**
  * 打开文件
  */
 int sys_open(const char *name, int flags, ...) {
-	if (kernel_strncmp(name, "tty", 3) == 0) {
+	if (kernel_strncmp(name, "/dev", 3) == 0) {
         if (!is_path_valid(name)) {
             log_printf("path is not valid.");
             return -1;
@@ -178,22 +202,17 @@ int sys_open(const char *name, int flags, ...) {
             }
         }
 
-		if (kernel_strlen(name) < 5) {
-			goto sys_open_failed;
-		}
-
-		int num = name[4] - '0';
-		int dev_id = dev_open(DEV_TTY, num, 0);
-		if (dev_id < 0) {
-			goto sys_open_failed;
-		}
-
-		file->dev_id = dev_id;
+		name = path_next_child(name);
+		file->dev_id = -1;
 		file->mode = 0;
 		file->pos = 0;
 		file->ref = 1;
-		file->type = FILE_TTY;
+
 		kernel_strncpy(file->file_name, name, FILE_NAME_SIZE);
+		int err = devfs_op.open((fs_t *)0, name, file);
+		if (err < 0) {
+			goto sys_open_failed;
+		}
 		return fd;
 
 sys_open_failed:
