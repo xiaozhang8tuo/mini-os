@@ -9,6 +9,7 @@
 #include "fs/file.h"
 #include "dev/dev.h"
 #include <sys/file.h>
+#include "dev/disk.h"
 
 #define FS_TABLE_SIZE		10		// 文件系统表数量
 
@@ -150,6 +151,9 @@ static void mount_list_init (void) {
 void fs_init (void) {
 	mount_list_init();
     file_table_init();
+
+	// 磁盘检查
+	disk_init();
 
 	// 挂载设备文件系统，待后续完成。挂载点名称可随意
 	fs_t * fs = mount(FS_DEVFS, "/dev", 0, 0);
