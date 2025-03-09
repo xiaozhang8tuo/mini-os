@@ -35,6 +35,37 @@
 
 #define	DISK_DRIVE_BASE		    0xE0		// 驱动器号基础值:0xA0 + LBA
 
+#pragma pack(1)
+
+/**
+ * MBR的分区表项类型
+ */
+typedef struct _part_item_t {
+    uint8_t boot_active;               // 分区是否活动
+	uint8_t start_header;              // 起始header
+	uint16_t start_sector : 6;         // 起始扇区
+	uint16_t start_cylinder : 10;	    // 起始磁道
+	uint8_t system_id;	                // 文件系统类型
+	uint8_t end_header;                // 结束header
+	uint16_t end_sector : 6;           // 结束扇区
+	uint16_t end_cylinder : 10;        // 结束磁道
+	uint32_t relative_sectors;	        // 相对于该驱动器开始的相对扇区数
+	uint32_t total_sectors;            // 总的扇区数
+}part_item_t;
+
+#define MBR_PRIMARY_PART_NR	    4   // 4个分区表
+
+/**
+ * MBR区域描述结构  MBR：位于前 512 字节，包含分区信息。 disk.img 是否有分区由其二进制内容决定，代码只能读取或修改这些信息，不能决定其是否存在分区。
+ */
+typedef  struct _mbr_t {
+	uint8_t code[446];                 // 引导代码区
+    part_item_t part_item[MBR_PRIMARY_PART_NR];
+	uint8_t boot_sig[2];               // 引导标志
+}mbr_t;
+
+#pragma pack()
+
 struct _disk_t;
 
 /**

@@ -74,6 +74,55 @@ static void print_disk_info (disk_t * disk) {
     log_printf("%s:", disk->name);
     log_printf("  port_base: %x", disk->port_base);
     log_printf("  total_size: %d m", disk->sector_count * disk->sector_size / 1024 /1024);
+    log_printf("  drive: %s", disk->drive == DISK_DISK_MASTER ? "Master" : "Slave");
+
+    // 显示分区信息
+    log_printf("  Part info:");
+    for (int i = 0; i < DISK_PRIMARY_PART_CNT; i++) {
+        partinfo_t * part_info = disk->partinfo + i;
+        if (part_info->type != FS_INVALID) {
+            log_printf("    %s: type: %x, start sector: %d, count %d",
+                    part_info->name, part_info->type,
+                    part_info->start_sector, part_info->total_sector);
+        }
+    }
+}
+
+/**
+ * 获取指定序号的分区信息
+ * 注意，该操作依赖物理分区分配，如果设备的分区结构有变化，则序号也会改变，得到的结果不同
+ */
+static int detect_part_info(disk_t * disk) {
+    mbr_t mbr;
+
+    // 读取mbr区
+    ata_send_cmd(disk, 0, 1, DISK_CMD_READ);
+    int err = ata_wait_data(disk);
+    if (err < 0) {
+        log_printf("read mbr failed");
+        return err;
+    }
+    ata_read_data(disk, &mbr, sizeof(mbr));
+
+	// 遍历4个主分区描述，不考虑支持扩展分区
+	part_item_t * item = mbr.part_item;
+    partinfo_t * part_info = disk->partinfo + 1;
+	for (int i = 0; i < MBR_PRIMARY_PART_NR; i++, item++, part_info++) {
+		part_info->type = item->system_id;
+
+        // 没有分区，清空part_info
+		if (part_info->type == FS_INVALID) {
+			part_info->total_sector = 0;
+            part_info->start_sector = 0;
+            part_info->disk = (disk_t *)0;
+        } else {
+            // 在主分区中找到，复制信息
+            kernel_sprintf(part_info->name, "%s%d", disk->name, i + 1);
+            part_info->start_sector = item->relative_sectors;
+            part_info->total_sector = item->total_sectors;
+            part_info->disk = disk;
+        }
+	}
 }
 
 /**
@@ -102,6 +151,18 @@ static int identify_disk (disk_t * disk) {
     ata_read_data(disk, buf, sizeof(buf));
     disk->sector_count = *(uint32_t *)(buf + 100); // 根据 ATA 规范，总扇区数存储在 IDENTIFY 数据块的 第 100 和 101 个 uint16_t 元素中。100-101	总用户可寻址扇区数（LBA48）
     disk->sector_size = SECTOR_SIZE;            // 固定为512字节大小
+
+    // 分区0保存了整个磁盘的信息
+    partinfo_t * part = disk->partinfo + 0;
+    part->disk = disk;
+    kernel_sprintf(part->name, "%s%d", disk->name, 0);
+    part->start_sector = 0;
+    part->total_sector = disk->sector_count;
+    part->type = FS_INVALID;
+
+    // 接下来识别硬盘上的分区信息
+    detect_part_info(disk);
+
     return 0;
 }
 
