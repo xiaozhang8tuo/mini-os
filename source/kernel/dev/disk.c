@@ -192,3 +192,83 @@ void disk_init (void) {
         }
     }
 }
+
+
+/**
+ * @brief 打开磁盘设备
+ */
+int disk_open (device_t * dev) {
+    // 0xa0   a磁盘号abc，0分区号0123
+    int disk_idx = (dev->minor >> 4) - 0xa;
+    int part_idx = dev->minor & 0xF;
+
+    if ((disk_idx >= DISK_CNT) || (part_idx >= DISK_PRIMARY_PART_CNT)) {
+        log_printf("device minor error: %d", dev->minor);
+        return -1;
+    }
+
+    disk_t * disk = disk_buf + disk_idx;
+    if (disk->sector_size == 0) {
+        log_printf("disk not exist. device:sd%x", dev->minor);
+        return -1;
+    }
+
+    partinfo_t * part_info = disk->partinfo + part_idx;
+    if (part_info->total_sector == 0) {
+        log_printf("part not exist. device:sd%x", dev->minor);
+        return -1;
+    }
+
+    // 磁盘存在，建立关联
+    dev->data = part_info;
+    irq_install(IRQ14_HARDDISK_PRIMARY, exception_handler_ide_primary);
+    irq_enable(IRQ14_HARDDISK_PRIMARY);
+    return 0;
+}
+
+/**
+ * @brief 读磁盘
+ */
+int disk_read (device_t * dev, int start_sector, char * buf, int count) {
+    return 0;
+}
+
+/**
+ * @brief 写扇区
+ */
+int disk_write (device_t * dev, int start_sector, char * buf, int count) {
+    return 0;
+}
+
+/**
+ * @brief 向磁盘发命令
+ *
+ */
+int disk_control (device_t * dev, int cmd, int arg0, int arg1) {
+    return 0;
+}
+
+/**
+ * @brief 关闭磁盘
+ *
+ */
+void disk_close (device_t * dev) {
+}
+
+/**
+ * @brief 磁盘主通道中断处理
+ */
+void do_handler_ide_primary (exception_frame_t *frame)  {
+    pic_send_eoi(IRQ14_HARDDISK_PRIMARY);
+}
+
+// 磁盘设备描述表
+dev_desc_t dev_disk_desc = {
+	.name = "disk",
+	.major = DEV_DISK,
+	.open = disk_open,
+	.read = disk_read,
+	.write = disk_write,
+	.control = disk_control,
+	.close = disk_close,
+};

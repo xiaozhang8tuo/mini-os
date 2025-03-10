@@ -2,10 +2,12 @@
 #include "dev/dev.h"
 #include "dev/tty.h"
 #include "tools/klib.h"
+#include "dev/disk.h"
 
 #define DEV_TABLE_SIZE          128     // 支持的设备数量
 
 extern dev_desc_t dev_tty_desc;
+extern dev_desc_t dev_disk_desc;
 
 // 设备表
 static device_t dev_tbl[DEV_TABLE_SIZE];
@@ -25,6 +27,7 @@ static int is_devid_bad (int dev_id) {
 // 设备描述表 在这里静态注册
 static dev_desc_t * dev_desc_tbl[] = {
     &dev_tty_desc,
+    &dev_disk_desc,
 };
 
 /**

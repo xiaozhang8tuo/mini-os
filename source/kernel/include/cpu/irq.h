@@ -25,6 +25,7 @@
 
 #define IRQ0_TIMER          0x20
 #define IRQ1_KEYBOARD		0x21				// 按键中断
+#define IRQ14_HARDDISK_PRIMARY		0x2E		// 主总线上的ATA磁盘中断
 
 // Figure 6-11. Page-Fault Error Code
 #define ERR_PAGE_P          (1 << 0)
