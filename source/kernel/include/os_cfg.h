@@ -17,4 +17,7 @@
 
 #define TASK_NR             128            // 进程的数量
 
+#define ROOT_DEV            DEV_DISK, 0xb1  // 根目录所在的设备
+
+
 #endif
