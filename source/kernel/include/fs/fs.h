@@ -4,6 +4,7 @@
 #include <sys/stat.h>
 #include "file.h"
 #include "tools/list.h"
+#include "fatfs/fatfs.h"
 #include "ipc/mutex.h"
 
 
@@ -40,6 +41,11 @@ typedef struct _fs_t {
     int dev_id;                 // 所属的设备
 
     list_node_t node;           // 下一结点
+
+    // 不用考虑内存分配的问题
+    union {
+        fat_t fat_data;         // 文件系统相关数据
+    };
     mutex_t * mutex;              // 文件系统操作互斥信号量
 }fs_t;
 
