@@ -486,3 +486,15 @@ int sys_fstat(int file, struct stat *st) {
 	fs_unprotect(fs);
 	return err;
 }
+
+int sys_opendir(const char * name, DIR * dir) {
+	return -1;
+}
+
+int sys_readdir(DIR* dir, struct dirent * dirent) {
+	return -1;
+}
+
+int sys_closedir(DIR *dir) {
+	return -1;
+}

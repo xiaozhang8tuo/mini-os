@@ -4,7 +4,8 @@
 #include <sys/stat.h>
 #include "file.h"
 #include "tools/list.h"
-#include "fatfs/fatfs.h"
+#include "applib/lib_syscall.h"
+#include "fs/fatfs/fatfs.h"
 #include "ipc/mutex.h"
 
 
@@ -62,5 +63,9 @@ int sys_close(int file);
 int sys_isatty(int file);
 int sys_fstat(int file, struct stat *st);
 int sys_dup (int file);
+
+int sys_opendir(const char * name, DIR * dir);
+int sys_readdir(DIR* dir, struct dirent * dirent);
+int sys_closedir(DIR *dir);
 
 #endif // FILE_H

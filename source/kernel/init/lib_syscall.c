@@ -1,8 +1,13 @@
-#include "lib_syscall.h"
+#include "core/syscall.h"
+#include "os_cfg.h"
+#include "applib/lib_syscall.h"
+#include "malloc.h"
 
-int sys_call (syscall_args_t * args) {
-    // RPL 使用特权级0,其实比3高即可，偏移量不需要，填0即可。类似于far_jump函数的实现
-	const unsigned long sys_gate_addr[] = {0, SELECTOR_SYSCALL | 0};
+/**
+ * 执行系统调用
+ */
+static inline int sys_call (syscall_args_t * args) {
+    const unsigned long sys_gate_addr[] = {0, SELECTOR_SYSCALL | 0};  // 使用特权级0
     int ret;
 
     // 采用调用门, 这里只支持5个参数
@@ -15,10 +20,10 @@ int sys_call (syscall_args_t * args) {
             "push %[arg0]\n\t"
             "push %[id]\n\t"
             "lcalll *(%[gate])\n\n"
-    		:"=a"(ret)
+            :"=a"(ret)
             :[arg3]"r"(args->arg3), [arg2]"r"(args->arg2), [arg1]"r"(args->arg1),
-            [arg0]"r"(args->arg0), [id]"r"(args->id),
-            [gate]"r"(sys_gate_addr));
+    [arg0]"r"(args->arg0), [id]"r"(args->id),
+    [gate]"r"(sys_gate_addr));
     return ret;
 }
 
@@ -30,13 +35,13 @@ int msleep (int ms) {
     syscall_args_t args;
     args.id = SYS_msleep;
     args.arg0 = ms;
-	return sys_call(&args);
+    return sys_call(&args);
 }
 
 int getpid() {
     syscall_args_t args;
     args.id = SYS_getpid;
-	return sys_call(&args);
+    return sys_call(&args);
 }
 
 int print_msg(char * fmt, int arg) {
@@ -126,7 +131,6 @@ int lseek(int file, int ptr, int dir) {
     return sys_call(&args);
 }
 
-
 /**
  * 获取文件的状态
  */
@@ -160,46 +164,4 @@ int dup (int file) {
     args.id = SYS_dup;
     args.arg0 = file;
     return sys_call(&args);
-}
-
-
-DIR * opendir(const char * name) {
-    DIR * dir = (DIR *)malloc(sizeof(DIR));
-    if (dir == (DIR *)0) {
-        return (DIR *)0;
-    }
-
-    syscall_args_t args;
-    args.id = SYS_opendir;
-    args.arg0 = (int)name;
-    args.arg1 = (int)dir;
-    int err = sys_call(&args);
-    if (err < 0) {
-        free(dir);
-        return (DIR *)0;
-    }
-    return dir;
-}
-
-struct dirent* readdir(DIR* dir) {
-
-    syscall_args_t args;
-    args.id = SYS_readdir;
-    args.arg0 = (int)dir;
-    args.arg1 = (int)&dir->dirent;
-    int err = sys_call(&args);
-    if (err < 0) {
-        return (struct dirent *)0;
-    }
-    return &dir->dirent;
-}
-
-int closedir(DIR *dir) {
-    syscall_args_t args;
-    args.id = SYS_closedir;
-    args.arg0 = (int)dir;
-    sys_call(&args);
-
-    free(dir);
-    return 0;
 }
