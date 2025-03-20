@@ -2,7 +2,38 @@
 #define FAT_H
 #include "ipc/mutex.h"
 
-#pragma pack(1)    // 千万记得加这个
+#pragma pack(1)
+
+#define DIRITEM_NAME_FREE               0xE5                // 目录项空闲名标记
+#define DIRITEM_NAME_END                0x00                // 目录项结束名标记
+
+#define DIRITEM_ATTR_READ_ONLY          0x01                // 目录项属性：只读
+#define DIRITEM_ATTR_HIDDEN             0x02                // 目录项属性：隐藏
+#define DIRITEM_ATTR_SYSTEM             0x04                // 目录项属性：系统类型
+#define DIRITEM_ATTR_VOLUME_ID          0x08                // 目录项属性：卷id
+#define DIRITEM_ATTR_DIRECTORY          0x10                // 目录项属性：目录
+#define DIRITEM_ATTR_ARCHIVE            0x20                // 目录项属性：归档
+#define DIRITEM_ATTR_LONG_NAME          0x0F                // 目录项属性：长文件名
+
+#define SFN_LEN                    	 	11              // sfn文件名长
+
+/**
+ * FAT目录项
+ */
+typedef struct _diritem_t {
+    uint8_t DIR_Name[11];                   // 文件名
+    uint8_t DIR_Attr;                      // 属性
+    uint8_t DIR_NTRes;
+    uint8_t DIR_CrtTimeTeenth;             // 创建时间的毫秒
+    uint16_t DIR_CrtTime;         // 创建时间
+    uint16_t DIR_CrtDate;         // 创建日期
+    uint16_t DIR_LastAccDate;     // 最后访问日期
+    uint16_t DIR_FstClusHI;                // 簇号高16位
+    uint16_t DIR_WrtTime;         // 修改时间
+    uint16_t DIR_WrtDate;         // 修改时期
+    uint16_t DIR_FstClusL0;                // 簇号低16位
+    uint32_t DIR_FileSize;                 // 文件字节大小
+} diritem_t;
 
 /**
  * 完整的DBR类型
@@ -49,6 +80,7 @@ typedef struct _fat_t {
 
     // 与文件系统读写相关信息
     uint8_t * fat_buffer;             		// FAT表项缓冲
+    int curr_sector;                        // 当前缓存的扇区数
 
     struct _fs_t * fs;                      // 所在的文件系统
 } fat_t;
