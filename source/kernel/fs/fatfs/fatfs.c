@@ -4,7 +4,7 @@
 #include "core/memory.h"
 #include "tools/log.h"
 #include "tools/klib.h"
-
+#include <sys/fcntl.h>
 
 /**
  * @brief 缓存读取磁盘数据，用于目录的遍历等
@@ -20,6 +20,41 @@ static int bread_sector (fat_t * fat, int sector) {
         return 0;
     }
     return -1;
+}
+
+/**
+ * @brief 转换文件名为diritem中的短文件名，如a.txt 转换成a      txt
+ */
+static void to_sfn(char* dest, const char* src) {
+    kernel_memset(dest, ' ', SFN_LEN);
+
+    // 不断生成直到遇到分隔符和写完缓存
+    char * curr = dest;
+    char * end = dest + SFN_LEN;
+    while (*src && (curr < end)) {
+        char c = *src++;
+
+        switch (c) {
+        case '.':       // 隔附，跳到扩展名区，不写字符
+            curr = dest + 8;
+            break;
+        default:
+            if ((c >= 'a') && (c <= 'z')) {
+                c = c - 'a' + 'A';
+            }
+            *curr++ = c;
+            break;
+        }
+    }
+}
+
+/**
+ * @brief 判断item项是否与指定的名称相匹配
+ */
+int diritem_name_match (diritem_t * item, const char * path) {
+    char buf[SFN_LEN];
+    to_sfn(buf, path);
+    return kernel_memcmp(buf, item->DIR_Name, SFN_LEN) == 0;
 }
 
 /**
@@ -154,10 +189,56 @@ void fatfs_unmount (struct _fs_t * fs) {
 }
 
 /**
+ * @brief 从diritem中读取相应的文件信息
+ */
+static void read_from_diritem (fat_t * fat, file_t * file, diritem_t * item, int index) {
+    file->type = diritem_get_type(item);
+    file->size = (int)item->DIR_FileSize;
+    file->pos = 0;
+    file->sblk = (item->DIR_FstClusHI << 16) | item->DIR_FstClusL0;
+    file->cblk = file->sblk;
+    file->p_index = index;
+}
+
+/**
  * @brief 打开指定的文件
  */
 int fatfs_open (struct _fs_t * fs, const char * path, file_t * file) {
-	return -1;
+    fat_t * fat = (fat_t *)fs->data;
+    diritem_t * file_item = (diritem_t *)0;
+    int p_index = -1;
+
+    // 遍历根目录的数据区，找到已经存在的匹配项
+    for (int i = 0; i < fat->root_ent_cnt; i++) {
+        diritem_t * item = read_dir_entry(fat, i);
+        if (item == (diritem_t *)0) {
+            return -1;
+        }
+
+         // 结束项，不需要再扫描了，同时index也不能往前走
+        if (item->DIR_Name[0] == DIRITEM_NAME_END) {
+            break;
+        }
+
+        // 只显示普通文件和目录，其它的不显示
+        if (item->DIR_Name[0] == DIRITEM_NAME_FREE) {
+            continue;
+        }
+
+        // 找到要打开的目录
+        if (diritem_name_match(item, path)) {
+            file_item = item;
+            p_index = i;
+            break;
+        }
+    }
+
+    if (file_item) {
+        read_from_diritem(fat, file, file_item, p_index);
+        return 0;
+    }
+
+    return -1;
 }
 
 /**

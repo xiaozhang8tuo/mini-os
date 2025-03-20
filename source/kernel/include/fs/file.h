@@ -29,6 +29,9 @@ typedef struct _file_t {
     int dev_id;                 // 文件所属的设备号 
 
     int pos;                   	// 当前位置
+    int sblk;                   // 内部起始块位置
+    int cblk;                   // 当前块
+    int p_index;                // 在目录表中表项的索引
     int mode;					// 读写模式
 
     struct _fs_t * fs;          // 所在的文件系统
