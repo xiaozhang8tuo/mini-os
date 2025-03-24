@@ -112,6 +112,21 @@ static diritem_t * read_dir_entry (fat_t * fat, int index) {
     return (diritem_t *)(fat->fat_buffer + offset % fat->bytes_per_sec);
 }
 
+/**
+ * @brief 移动文件指针
+ */
+static int move_file_pos(file_t* file, fat_t * fat, uint32_t move_bytes, int expand) {
+	uint32_t c_offset = file->pos % fat->cluster_byte_size;
+
+    // 跨簇，则调整curr_cluster。注意，如果已经是最后一个簇了，则curr_cluster不会调整
+	if (c_offset + move_bytes >= fat->cluster_byte_size) {
+        return -1;
+	}
+
+	file->pos += move_bytes;
+	return 0;
+}
+
 
 /**
  * @brief 挂载fat文件系统
@@ -245,7 +260,55 @@ int fatfs_open (struct _fs_t * fs, const char * path, file_t * file) {
  * @brief 读了文件
  */
 int fatfs_read (char * buf, int size, file_t * file) {
-    return 0;
+    fat_t * fat = (fat_t *)file->fs->data;
+
+    // 调整读取量，不要超过文件总量
+    uint32_t nbytes = size;
+    if (file->pos + nbytes > file->size) {
+        nbytes = file->size - file->pos;
+    }
+
+    uint32_t total_read = 0;
+    while (nbytes > 0) {
+        uint32_t curr_read = nbytes;
+		uint32_t cluster_offset = file->pos % fat->cluster_byte_size;
+        uint32_t start_sector = fat->data_start + (file->cblk - 2)* fat->sec_per_cluster;  // 从2开始
+
+        // 如果是整簇, 只读一簇
+        if ((cluster_offset == 0) && (nbytes == fat->cluster_byte_size)) {
+            int err = dev_read(fat->fs->dev_id, start_sector, buf, fat->sec_per_cluster);
+            if (err < 0) {
+                return total_read;
+            }
+
+            curr_read = fat->cluster_byte_size;
+        } else {
+            // 如果跨簇，只读第一个簇内的一部分
+            if (cluster_offset + curr_read > fat->cluster_byte_size) {
+                curr_read = fat->cluster_byte_size - cluster_offset;
+            }
+
+            // 读取整个簇，然后从中拷贝
+            fat->curr_sector = -1;
+            int err = dev_read(fat->fs->dev_id, start_sector, fat->fat_buffer, fat->sec_per_cluster);
+            if (err < 0) {
+                return total_read;
+            }
+            kernel_memcpy(buf, fat->fat_buffer + cluster_offset, curr_read);
+        }
+
+        buf += curr_read;
+        nbytes -= curr_read;
+        total_read += curr_read;
+
+        // 前移文件指针
+		int err = move_file_pos(file, fat, curr_read, 0);
+		if (err < 0) {
+            return total_read;
+        }
+	}
+
+    return total_read;
 }
 
 /**
