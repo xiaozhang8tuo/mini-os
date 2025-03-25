@@ -29,7 +29,8 @@
         "fs.h": "c",
         "stdio.h": "c",
         "tty.h": "c",
-        "fatfs.h": "c"
+        "fatfs.h": "c",
+        "file.h": "c"
     },
     "files.exclude": {
     "**/source_tmp/": true

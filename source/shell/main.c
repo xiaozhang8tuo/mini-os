@@ -106,6 +106,8 @@ static int do_exit (int argc, char ** argv) {
  * @brief 列出文本文件内容
  */
 static int do_less (int argc, char ** argv) {
+    int line_mode = 0;
+
     int ch;
     while ((ch = getopt(argc, argv, "lh")) != -1) {
         switch (ch) {
@@ -113,6 +115,9 @@ static int do_less (int argc, char ** argv) {
                 puts("show file content");
                 puts("less [-l] file");
                 puts("-l show file line by line.");
+                break;
+            case 'l':
+                line_mode = 1;
                 break;
             case '?':
                 if (optarg) {
@@ -139,8 +144,32 @@ static int do_less (int argc, char ** argv) {
 
     char * buf = (char *)malloc(255);
 
-    while (fgets(buf, 255, file) != NULL)  {
-        fputs(buf, stdout);
+    if (line_mode == 0) {
+        while (fgets(buf, 255, file) != NULL)  {
+            fputs(buf, stdout);
+        }
+    } else {
+        // 不使用缓存，这样能直接立即读取到输入而不用等回车
+        setvbuf(stdin, NULL, _IONBF, 0);
+        ioctl(0, TTY_CMD_ECHO, 0, 0);
+        while (1) {
+            char * b = fgets(buf, 255, file);
+            if (b == NULL ) {
+                break;
+            }
+            fputs(buf, stdout);
+
+            int ch;
+            while ((ch = fgetc(stdin)) != 'n') {
+                if (ch == 'q') {
+                    goto less_quit;
+                }
+            }
+        }
+    less_quit:
+    // 恢复为行缓存
+        setvbuf(stdin, NULL,_IOLBF, BUFSIZ);
+        ioctl(0, TTY_CMD_ECHO, 1, 0);
     }
     free(buf);
     fclose(file);

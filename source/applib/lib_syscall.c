@@ -162,6 +162,15 @@ int dup (int file) {
     return sys_call(&args);
 }
 
+int ioctl(int fd, int cmd, int arg0, int arg1) {
+    syscall_args_t args;
+    args.id = SYS_ioctl;
+    args.arg0 = fd;
+    args.arg1 = cmd;
+    args.arg2 = arg0;
+    args.arg3 = arg1;
+    return sys_call(&args);
+}
 
 DIR * opendir(const char * name) {
     DIR * dir = (DIR *)malloc(sizeof(DIR));

@@ -325,6 +325,29 @@ int sys_dup (int file) {
 }
 
 /**
+ * @brief IO设备控制
+ */
+int sys_ioctl(int fd, int cmd, int arg0, int arg1) {
+	if (is_fd_bad(fd)) {
+		return 0;
+	}
+
+	file_t * pfile = task_file(fd);
+	if (pfile == (file_t *)0) {
+		return 0;
+	}
+
+	fs_t * fs = pfile->fs;
+
+	fs_protect(fs);
+	int err = fs->op->ioctl(pfile, cmd, arg0, arg1);
+	fs_unprotect(fs);
+	return err;
+}
+
+
+
+/**
  * 读取文件api
  */
 int sys_read(int file, char *ptr, int len) {
