@@ -30,7 +30,10 @@
         "stdio.h": "c",
         "tty.h": "c",
         "fatfs.h": "c",
-        "file.h": "c"
+        "file.h": "c",
+        "string.h": "c",
+        "stdlib.h": "c",
+        "getopt.h": "c"
     },
     "files.exclude": {
     "**/source_tmp/": true
