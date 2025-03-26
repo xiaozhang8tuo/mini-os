@@ -30,7 +30,7 @@ typedef struct _file_t {
 
     int pos;                   	// 当前位置
     int sblk;                   // 内部起始块位置
-    int cblk;                   // 当前块
+    int cblk;                   // 当前块,当前簇号
     int p_index;                // 在目录表中表项的索引
     int mode;					// 读写模式
 

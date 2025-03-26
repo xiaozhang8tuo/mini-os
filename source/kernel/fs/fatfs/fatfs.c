@@ -365,7 +365,42 @@ void fatfs_close (file_t * file) {
  * @brief 文件读写位置的调整
  */
 int fatfs_seek (file_t * file, uint32_t offset, int dir) {
-    return -1;          // 不支持，只允许应用程序连续读取
+     // 只支持基于文件开头的定位
+    if (dir != 0) {
+        return -1;
+    }
+
+    fat_t * fat = (fat_t *)file->fs->data;
+    cluster_t curr_cluster = file->sblk;
+    uint32_t curr_pos = 0;
+    uint32_t offset_to_move = offset;
+
+    while (offset_to_move > 0) {
+        uint32_t c_off = curr_pos % fat->cluster_byte_size;
+        uint32_t curr_move = offset_to_move;
+
+        // 不超过一簇，直接调整位置，无需跑到下一簇
+        if (c_off + curr_move < fat->cluster_byte_size) {
+            curr_pos += curr_move;
+            break;
+        }
+
+        // 超过一簇，只在当前簇内移动
+        curr_move = fat->cluster_byte_size - c_off;
+        curr_pos += curr_move;
+        offset_to_move -= curr_move;
+
+        // 取下一簇
+        curr_cluster = cluster_get_next(fat, curr_cluster);
+        if (!cluster_is_valid(curr_cluster)) {
+            return -1;
+        }
+    }
+
+    // 最后记录一下位置
+    file->pos = curr_pos;
+    file->cblk = curr_cluster;
+    return 0;
 }
 
 int fatfs_stat (file_t * file, struct stat *st) {

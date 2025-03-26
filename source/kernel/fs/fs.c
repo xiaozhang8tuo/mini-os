@@ -22,10 +22,6 @@ static fs_t * root_fs;				// 根文件系统
 extern fs_op_t devfs_op;
 extern fs_op_t fatfs_op;
 
-#define TEMP_FILE_ID		100
-#define TEMP_ADDR        	(8*1024*1024)      // 在0x800000处缓存原始
-
-static uint8_t * temp_pos;       // 当前位置
 
 /**
 * 使用LBA48位模式读取磁盘
@@ -235,16 +231,6 @@ static void fs_unprotect (fs_t * fs) {
  * 打开文件
  */
 int sys_open(const char *name, int flags, ...) {
-	// 临时使用，保留shell加载的功能
-	if (kernel_strncmp(name, "/shell.elf", 4) == 0) {
-        // 暂时直接从扇区1000上读取, 读取大概40KB，足够了
-		int dev_id = dev_open(DEV_DISK, 0xa0, (void *)0);
-		dev_read(dev_id, 5000, (uint8_t *)TEMP_ADDR, 80);
-        //read_disk(5000, read_disk80, (uint8_t *)TEMP_ADDR);
-        temp_pos = (uint8_t *)TEMP_ADDR;
-        return TEMP_FILE_ID;
-    }
-
 	// 分配文件描述符链接
 	file_t * file = file_alloc();
 	if (!file) {
@@ -351,12 +337,6 @@ int sys_ioctl(int fd, int cmd, int arg0, int arg1) {
  * 读取文件api
  */
 int sys_read(int file, char *ptr, int len) {
-    if (file == TEMP_FILE_ID) {
-        kernel_memcpy(ptr, temp_pos, len);
-        temp_pos += len;
-        return len;
-    }
-
     if (is_fd_bad(file) || !ptr || !len) {
 		return 0;
 	}
@@ -411,11 +391,6 @@ int sys_write(int file, char *ptr, int len) {
  * 文件访问位置定位
  */
 int sys_lseek(int file, int ptr, int dir) {
-    if (file == TEMP_FILE_ID) {
-        temp_pos = (uint8_t *)(ptr + TEMP_ADDR);
-        return 0;
-    }
-
 	if (is_fd_bad(file)) {
 		return -1;
 	}
@@ -439,10 +414,6 @@ int sys_lseek(int file, int ptr, int dir) {
  * 关闭文件
  */
 int sys_close(int file) {
-    if (file == TEMP_FILE_ID) {
-		return 0;
-	}
-
 	if (is_fd_bad(file)) {
 		log_printf("file error");
 		return -1;
