@@ -3,6 +3,7 @@
 #include "comm/cpu_instr.h"
 #include "os_cfg.h"
 #include "tools/log.h"
+#include "core/task.h"
 #define IDT_TABLE_NR 128
 
 
@@ -40,8 +41,13 @@ static void do_default_handler (exception_frame_t* frame, const char* message) {
     log_printf("IRQ/Exception happend: %s", message);
     dump_core_regs(frame);
 
-    for (;;) {
-        hlt();
+    // CS - CPL 0,3 用户特权级触发的非法访问不hlt
+    if (frame->cs & 0x3) {
+        sys_exit(frame->error_code);
+    } else {
+        for (;;) {
+            hlt();
+        }
     }
 }
 
@@ -122,8 +128,12 @@ void do_handler_general_protection(exception_frame_t * frame) {
     log_printf("segment index: %d", frame->error_code & 0xFFF8);
 
     dump_core_regs(frame);
-    while (1) {
-        hlt();
+    if (frame->cs & 0x3) {
+        sys_exit(frame->error_code);
+    } else {
+        for (;;) {
+            hlt();
+        }
     }
 }
 
@@ -149,8 +159,12 @@ void do_handler_page_fault(exception_frame_t * frame) {
     }
 
     dump_core_regs(frame);
-    while (1) {
-        hlt();
+    if (frame->cs & 0x3) {
+        sys_exit(frame->error_code);
+    } else {
+        for (;;) {
+            hlt();
+        }
     }
 }
 
