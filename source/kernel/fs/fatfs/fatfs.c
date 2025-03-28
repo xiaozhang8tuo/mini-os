@@ -23,6 +23,14 @@ static int bread_sector (fat_t * fat, int sector) {
 }
 
 /**
+ * @brief 写缓存
+ */
+static int bwrite_secotr (fat_t * fat, int sector) {
+    int cnt = dev_write(fat->fs->dev_id, sector, fat->fat_buffer, 1);
+    return (cnt == 1) ? 0 : -1;
+}
+
+/**
  * 检查指定簇是否可用，非占用或坏簇
  */
 int cluster_is_valid (cluster_t cluster) {
@@ -255,6 +263,44 @@ static void read_from_diritem (fat_t * fat, file_t * file, diritem_t * item, int
 }
 
 /**
+ * 缺省初始化driitem
+ */
+int diritem_init(diritem_t * item, uint8_t attr,const char * name) {
+    to_sfn((char *)item->DIR_Name, name);
+    item->DIR_FstClusHI = (uint16_t )(FAT_CLUSTER_INVALID >> 16);
+    item->DIR_FstClusL0 = (uint16_t )(FAT_CLUSTER_INVALID & 0xFFFF);
+    item->DIR_FileSize = 0;
+    item->DIR_Attr = attr;
+    item->DIR_NTRes = 0;
+
+    // 时间写固定值，简单方便
+    item->DIR_CrtTime = 0;
+    item->DIR_CrtDate = 0;
+    item->DIR_WrtTime = item->DIR_CrtTime;
+    item->DIR_WrtDate = item->DIR_CrtDate;
+    item->DIR_LastAccDate = item->DIR_CrtDate;
+    return 0;
+}
+
+/**
+ * @brief 写dir目录项
+ */
+static int write_dir_entry (fat_t * fat, diritem_t * item, int index) {
+    if ((index < 0) || (index >= fat->root_ent_cnt)) {
+        return -1;
+    }
+
+    int offset = index * sizeof(diritem_t);
+    int sector = fat->root_start + offset / fat->bytes_per_sec;
+    int err = bread_sector(fat, sector);
+    if (err < 0) {
+        return -1;
+    }
+    kernel_memcpy(fat->fat_buffer + offset % fat->bytes_per_sec, item, sizeof(diritem_t));
+    return bwrite_secotr(fat, sector);
+}
+
+/**
  * @brief 打开指定的文件
  */
 int fatfs_open (struct _fs_t * fs, const char * path, file_t * file) {
@@ -271,11 +317,13 @@ int fatfs_open (struct _fs_t * fs, const char * path, file_t * file) {
 
          // 结束项，不需要再扫描了，同时index也不能往前走
         if (item->DIR_Name[0] == DIRITEM_NAME_END) {
+            p_index = i;
             break;
         }
 
         // 只显示普通文件和目录，其它的不显示
         if (item->DIR_Name[0] == DIRITEM_NAME_FREE) {
+            p_index = i;
             continue;
         }
 
@@ -289,10 +337,20 @@ int fatfs_open (struct _fs_t * fs, const char * path, file_t * file) {
 
     if (file_item) {
         read_from_diritem(fat, file, file_item, p_index);
-        return 0;
+    } else if ((file->mode & O_CREAT) && (p_index >= 0)) {
+        // 创建一个空闲的diritem项
+        diritem_t item;
+        diritem_init(&item, 0, path);
+        int err = write_dir_entry(fat, &item, p_index);
+        if (err < 0) {
+            log_printf("create file failed.");
+            return -1;
+        }
+
+        read_from_diritem(fat, file, &item, p_index);
     }
 
-    return -1;
+    return 0;
 }
 
 /**
@@ -358,7 +416,21 @@ int fatfs_write (char * buf, int size, file_t * file) {
 }
 
 void fatfs_close (file_t * file) {
+    if (file->mode == O_RDONLY) {
+        return;
+    }
 
+    fat_t * fat = (fat_t *)file->fs->data;
+
+    diritem_t * item = read_dir_entry(fat, file->p_index);
+    if (item == (diritem_t *)0) {
+        return;
+    }
+
+    item->DIR_FileSize = file->size;
+    item->DIR_FstClusHI = (uint16_t )(file->sblk >> 16);
+    item->DIR_FstClusL0 = (uint16_t )(file->sblk & 0xFFFF);
+    write_dir_entry(fat, item, file->p_index);
 }
 
 /**
