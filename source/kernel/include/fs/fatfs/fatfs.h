@@ -5,6 +5,8 @@
 #pragma pack(1)
 
 #define FAT_CLUSTER_INVALID 		0xFFF8      	// 无效的簇号
+#define FAT_CLUSTER_FREE          	0x00     	    // 空闲或无效的簇号
+
 
 #define DIRITEM_NAME_FREE               0xE5                // 目录项空闲名标记
 #define DIRITEM_NAME_END                0x00                // 目录项结束名标记

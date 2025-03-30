@@ -203,6 +203,25 @@ static int do_ls (int argc, char ** argv) {
 }
 
 /**
+ * @brief 删除文件命令
+ */
+static int do_remove (int argc, char ** argv) {
+    if (argc < 2) {
+        fprintf(stderr, "no file");
+        return -1;
+    }
+
+    int err = unlink(argv[1]);
+    if (err < 0) {
+        fprintf(stderr, "rm file failed: %s", argv[1]);
+        return err;
+    }
+
+    return 0;
+}
+
+
+/**
  * @brief 复制文件命令
  */
 static int do_cp (int argc, char ** argv) {
@@ -267,6 +286,11 @@ static const cli_cmd_t cmd_list[] = {
         .name = "cp",
         .useage = "cp from to -- copy file",
         .do_func = do_cp,
+    },
+    {
+       .name = "rm",
+        .useage = "rm file -- remove file",
+        .do_func = do_remove,
     },
     {
         .name = "quit",
