@@ -60,6 +60,7 @@ void log_printf(const char* fmt, ...) {
 #endif
 
     //console_write(0, str_buf, kernel_strlen(str_buf));
+    dev_write(log_dev_id, 0, "log:", 4);
     dev_write(log_dev_id, 0, str_buf, kernel_strlen(str_buf));
 
     char c = '\n';
